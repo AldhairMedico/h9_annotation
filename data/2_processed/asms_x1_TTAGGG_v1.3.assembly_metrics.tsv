@@ -1,0 +1,24 @@
+metric	GCA_000001405.29_GRCh38.p14_genomic.chr.fna	GCA_009914755.4_T2T-CHM13v2.0_genomic.chr.fna	GCA_018852605.3_hg002v1.1.pat_genomic.fna	GCA_018852615.3_hg002v1.1.mat_genomic.chr.fna	GCA_050656315.1_RPE1V1.1_Haplotype_2_genomic.chr.fna	GCA_050656345.1_RPE1V1.1_Haplotype_1_genomic.chr.fna	GWHGEYB00000000.1.genome.fasta.gz	GWHGEYC00000000.1.genome.fasta.gz	H9_T2T_v0.1_hap1.fasta	H9_T2T_v0.1_hap2.fasta	I002Cv0.7.hap1.fasta.gz	I002Cv0.7.hap2.fasta.gz
+Total paths	24	25	23	23	23	23	23	24	23	23	23	23
+Total gaps	903	0	4	5	34	62	0	0	4	4	0	0
+Total telomeres	11	48	46	46	40	38	46	46	46	45	46	46
+Total ITS blocks	515	557	518	475	466	472	521	484	468	463	528	474
+Total canonical matches	1090557	1128638	1067553	1106181	1114920	1141798	1105655	1158782	1148186	1139453	1087423	1123292
+Total windows analyzed	5875020	6234571	5880510	6056176	5986351	6126583	5829051	6046511	6080008	6035859	5891445	6064581
+Mean length	908.636	2969.27	3047.8	2458.83	4895.02	4918.66	8467	9561.59	8013.11	7200.27	5357.13	4660.39
+Median length	913	2834	2342.5	2397	4652.5	4876	8056	9671.5	6926.5	5943	4884	4585
+Min length	594	1551	1638	1454	3174	2626	1803	4164	758	1862	2591	2440
+Max length	1879	6385	17781	3651	7831	7881	15227	17995	19222	22214	12042	7437
+Two telomeres	0	24	23	23	17	15	23	23	23	22	23	23
+One telomere	9	0	0	0	6	8	0	0	0	1	0	0
+Zero telomeres	14	1	0	0	0	0	0	1	0	0	0	0
+T2T	0	24	19	18	13	14	23	23	19	19	23	23
+Gapped T2T	0	0	4	5	4	1	0	0	4	3	0	0
+Missassembled	0	0	0	0	0	0	0	0	0	0	0	0
+Gapped missassembled	0	0	0	0	0	0	0	0	0	0	0	0
+Incomplete	0	0	0	0	3	6	0	0	0	0	0	0
+Gapped incomplete	9	0	0	0	3	2	0	0	0	1	0	0
+No telomeres	0	1	0	0	0	0	0	1	0	0	0	0
+Gapped no telomeres	14	0	0	0	0	0	0	0	0	0	0	0
+Discordant	0	0	0	0	0	0	0	0	0	0	0	0
+Gapped discordant	1	0	0	0	0	0	0	0	0	0	0	0
