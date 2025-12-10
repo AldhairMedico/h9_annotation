@@ -8,11 +8,9 @@ __pycache__/
 .Rproj.user/
 
 # Data (keep only README)
-data/*
 !data/README.md
 
 # Figures (keep only README)
-figures/*
 !figures/README.md
 
 # Logs & temp
