@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# R
+.Rhistory
+.Rproj.user/
+
+# Data (keep only README)
+data/*
+!data/README.md
+
+# Figures (keep only README)
+figures/*
+!figures/README.md
+
+# Logs & temp
+*.log
+*.out
+*.err
+*.tmp
+*.swp
+
+# Big genomics files
+*.bam
+*.bam.bai
+*.cram
+*.cram.crai
+*.sam
+*.fastq
+*.fastq.gz
+*.fq.gz
+*.fa
+*.fa.gz
+*.fasta
+*.fasta.gz
+*.vcf
+*.vcf.gz
+*.bed
+*.bed.gz
+
+# Workflow dirs
+.snakemake/
+.nextflow/
+.slurm/
