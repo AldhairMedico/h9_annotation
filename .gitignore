@@ -33,10 +33,19 @@ __pycache__/
 *.fa.gz
 *.fasta
 *.fasta.gz
+*.fna
+*.fna.gz
 *.vcf
 *.vcf.gz
 *.bed
 *.bed.gz
+
+# Bid/numerous output files
+*_canonical_matches.bed
+*_noncanonical_matches.bed
+*_window_metrics.bedgraph
+*.path.report
+*.ls
 
 # Workflow dirs
 .snakemake/
