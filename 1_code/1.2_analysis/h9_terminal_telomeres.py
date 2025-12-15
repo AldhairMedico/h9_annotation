@@ -9,23 +9,93 @@ Goal
 """
 
 import os
+import re
 from typing import Dict
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Directory structure
 # ───────────────────────────────────────────────────────────────────────────────
-base_dir = "/mnt/d/research/h9_annotation"
-data_dir = os.path.join(base_dir, "2_data/2.2_processed")
-figures_dir = os.path.join(base_dir, "3_figures/3.1_draft")
-run_label = "v2"  # Label for output filenames
+# Determine base_dir dynamically from script location
+script_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(os.path.dirname(script_dir))
+data_dir = os.path.join(base_dir, "2_data", "2.2_processed")
+figures_dir = os.path.join(base_dir, "3_figures", "3.1_draft")
+run_label = "v3"  # Label for output filenames
+
+# Create subdirectories for organized output
+distance2end_dir = os.path.join(figures_dir, "25.12.14_distance2end")
+chr_positioning_dir = os.path.join(figures_dir, "25.12.14_chr_positioning")
+os.makedirs(distance2end_dir, exist_ok=True)
+os.makedirs(chr_positioning_dir, exist_ok=True)
 
 terminal_telomeres = os.path.join(data_dir, "25.12_10_asms_x1_TTAGGG_v1.3.terminal_telomeres.bed")
 terminal_telomeres_extended = os.path.join(data_dir, "25.12_10_asms_x1_TTAGGG_v1.3.terminal_telomeres_extended.bed")
 terminal_telomeres_filtered = os.path.join(data_dir, "25.12_10_asms_x1_TTAGGG_v1.3.terminal_telomeres_filtered.bed")
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Chromosome name mapping for GRCh38 and RPE1
+# ───────────────────────────────────────────────────────────────────────────────
+GRCH38_CHR_MAP = {
+    "CM000663.2": "chr1", "CM000664.2": "chr2", "CM000665.2": "chr3",
+    "CM000666.2": "chr4", "CM000667.2": "chr5", "CM000668.2": "chr6",
+    "CM000669.2": "chr7", "CM000670.2": "chr8", "CM000671.2": "chr9",
+    "CM000672.2": "chr10", "CM000673.2": "chr11", "CM000674.2": "chr12",
+    "CM000675.2": "chr13", "CM000676.2": "chr14", "CM000677.2": "chr15",
+    "CM000678.2": "chr16", "CM000679.2": "chr17", "CM000680.2": "chr18",
+    "CM000681.2": "chr19", "CM000682.2": "chr20", "CM000683.2": "chr21",
+    "CM000684.2": "chr22", "CM000685.2": "chrX", "CM000686.2": "chrY",
+}
+
+RPE1_HAP2_CHR_MAP = {
+    "CM116119.1": "chr1", "CM116120.1": "chr2", "CM116121.1": "chr3",
+    "CM116122.1": "chr4", "CM116123.1": "chr5", "CM116124.1": "chr6",
+    "CM116125.1": "chr7", "CM116126.1": "chr8", "CM116127.1": "chr9",
+    "CM116128.1": "chr10", "CM116129.1": "chr11", "CM116130.1": "chr12",
+    "CM116131.1": "chr13", "CM116132.1": "chr14", "CM116133.1": "chr15",
+    "CM116134.1": "chr16", "CM116135.1": "chr17", "CM116136.1": "chr18",
+    "CM116137.1": "chr19", "CM116138.1": "chr20", "CM116139.1": "chr21",
+    "CM116140.1": "chr22", "CM116141.1": "chrX",
+}
+
+# RPE1 hap1 uses CM116095.1 to CM116117.1
+RPE1_HAP1_CHR_MAP = {
+    "CM116095.1": "chr1", "CM116096.1": "chr2", "CM116097.1": "chr3",
+    "CM116098.1": "chr4", "CM116099.1": "chr5", "CM116100.1": "chr6",
+    "CM116101.1": "chr7", "CM116102.1": "chr8", "CM116103.1": "chr9",
+    "CM116104.1": "chr10", "CM116105.1": "chr11", "CM116106.1": "chr12",
+    "CM116107.1": "chr13", "CM116108.1": "chr14", "CM116109.1": "chr15",
+    "CM116110.1": "chr16", "CM116111.1": "chr17", "CM116112.1": "chr18",
+    "CM116113.1": "chr19", "CM116114.1": "chr20", "CM116115.1": "chr21",
+    "CM116116.1": "chr22", "CM116117.1": "chrX", "CM116118.1": "chrY",
+}
+
+
+def get_display_chr_name(chr_name: str, assembly_label: str) -> str:
+    """Convert chromosome name to display format based on assembly."""
+    # For H9: remove _hap1/_hap2 suffix
+    if assembly_label.startswith("H9"):
+        return re.sub(r'_hap[12]$', '', chr_name)
+
+    # For GRCh38: map accession to chr name
+    if assembly_label == "GRCh38":
+        return GRCH38_CHR_MAP.get(chr_name, chr_name)
+
+    # For RPE1 hap1: map accession to chr name
+    if assembly_label == "RPE1 hap1":
+        return RPE1_HAP1_CHR_MAP.get(chr_name, chr_name)
+
+    # For RPE1 hap2: map accession to chr name
+    if assembly_label == "RPE1 hap2":
+        return RPE1_HAP2_CHR_MAP.get(chr_name, chr_name)
+
+    return chr_name
+
 
 # Read with flexible columns (some assemblies have extra "Chromosome" field)
 # Handle mixed column counts (11 or 12 columns) by reading line by line
@@ -57,8 +127,8 @@ PALETTE: Dict[str, str] = {
     "CHM13"     : "#F0E442",  # Yellow
     "YAO mat"   : "#FF5353",  # Red
     "YAO pat"   : "#FFA5A5",  # Light Red
-    "HG002 mat" : "#0072B2",  # Okabe–Ito Blue
-    "HG002 pat" : "#56B4E9",  # Okabe–Ito Sky Blue
+    "HG002 mat" : "#0072B2",  # Okabe-Ito Blue
+    "HG002 pat" : "#56B4E9",  # Okabe-Ito Sky Blue
     "RPE1 hap1" : "#984EA3",  # Purple
     "RPE1 hap2" : "#CC79A7",  # Magenta
     "I002C hap1": "#D55E00",  # Vermillion
@@ -88,14 +158,17 @@ ASSEMBLY_MAP: Dict[str, str] = {
 # Map assembly to display name
 df["assembly_label"] = df["assembly"].map(ASSEMBLY_MAP)
 
+# Create display chromosome name
+df["chr_display"] = df.apply(lambda row: get_display_chr_name(row["chr"], row["assembly_label"]), axis=1)
+
 # Define assembly order for consistent legend ordering
 ASSEMBLY_ORDER = [
     "GRCh38", "CHM13", "HG002 mat", "HG002 pat",
-    "I002C hap1", "I002C hap2", "YAO mat", "YAO pat", 
+    "I002C hap1", "I002C hap2", "YAO mat", "YAO pat",
     "RPE1 hap1", "RPE1 hap2", "H9 hap1", "H9 hap2"
 ]
 
-# ───────────────────────────────────────────────────────────────────────────────  
+# ───────────────────────────────────────────────────────────────────────────────
 # Compute distance to end and chromosome positioning
 # ───────────────────────────────────────────────────────────────────────────────
 # distance2end: minimum of "start" vs ("chr_length" - "end")
@@ -123,19 +196,51 @@ df_filtered.to_csv(terminal_telomeres_filtered, sep="\t", index=False, header=Fa
 print(f"[OK] Filtered telomere data ({len(df_filtered)} records with distance2end <= 100) saved to {terminal_telomeres_filtered}")
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 1a: End distance (log) vs Telomere length - Scatter by assembly
+# Common settings for distance2end plots
 # ───────────────────────────────────────────────────────────────────────────────
-CUTOFF_1_BP = 100
-n_below_1 = len(df[df["distance2end"] <= CUTOFF_1_BP])
-n_above_1 = len(df[df["distance2end"] > CUTOFF_1_BP])
-outliers_1 = df[df["distance2end"] > CUTOFF_1_BP].copy()
+CUTOFF_BP = 100
+CUTOFF_PCT = 0.1
 
-fig, ax = plt.subplots(figsize=(6, 5.5))
+# Setup for chromosome positioning plots
+bar_height = 0.8
+cmap = plt.cm.hot
+
+# Normalizers for heatmap coloring
+norm_length = Normalize(vmin=df["length"].min() / 1000, vmax=df["length"].max() / 1000)
+norm_canonical = Normalize(vmin=df["canonical_pct"].min(), vmax=df["canonical_pct"].max())
+
+# Chromosome sort order (natural sort: chr1, chr2, ..., chr22, chrX, chrY)
+CHR_ORDER = ["chr" + str(i) for i in range(1, 23)] + ["chrX", "chrY"]
+
+def chr_sort_key(chr_name: str) -> int:
+    """Sort key for chromosome names."""
+    if chr_name in CHR_ORDER:
+        return CHR_ORDER.index(chr_name)
+    return 100  # Unknown chromosomes go last
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DISTANCE TO END PLOTS (Figures 1-4) -> distance2end_dir
+# Consistent aesthetics: black text, fontsize=8, linewidth=1
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Calculate outliers (same for both bp and pct based plots)
+n_below_bp = len(df[df["distance2end"] <= CUTOFF_BP])
+n_above_bp = len(df[df["distance2end"] > CUTOFF_BP])
+outliers_bp = df[df["distance2end"] > CUTOFF_BP].copy()
+
+n_below_pct = len(df[df["distance2end_pct"] <= CUTOFF_PCT])
+n_above_pct = len(df[df["distance2end_pct"] > CUTOFF_PCT])
+outliers_pct = df[df["distance2end_pct"] > CUTOFF_PCT].copy()
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Plot 1a: End distance (log bp) vs Telomere length - Scatter by assembly
+# ───────────────────────────────────────────────────────────────────────────────
+fig, ax = plt.subplots(figsize=(5, 4.5))
 for asm in ASSEMBLY_ORDER:
     subset = df[df["assembly_label"] == asm]
     if subset.empty:
         continue
-    # Filter out zero/negative distances for log scale
     subset = subset[subset["distance2end"] > 0]
     ax.scatter(
         subset["distance2end"],
@@ -146,19 +251,16 @@ for asm in ASSEMBLY_ORDER:
         s=10,
         edgecolors="none"
     )
-# Add cutoff line
-ax.axvline(x=CUTOFF_1_BP, color="black", linestyle="--", linewidth=1, label=f"Cutoff ({CUTOFF_1_BP} bp)")
-# Add count annotations
-ax.text(0.02, 0.98, f"≤{CUTOFF_1_BP}bp = {n_below_1}", transform=ax.transAxes,
-        fontsize=8, verticalalignment='top')
-ax.text(0.98, 0.98, f">{CUTOFF_1_BP}bp = {n_above_1}", transform=ax.transAxes,
-        fontsize=8, verticalalignment='top', horizontalalignment='right')
-# Label outliers (>100bp)
-for _, row in outliers_1.iterrows():
+ax.axvline(x=CUTOFF_BP, color="black", linestyle="--", linewidth=1)
+ax.text(0.02, 0.98, f"n={n_below_bp}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', color='black')
+ax.text(0.98, 0.98, f"n={n_above_bp}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', horizontalalignment='right', color='black')
+for _, row in outliers_bp.iterrows():
     ax.annotate(
-        f"{row['chr']}",
+        f"{row['chr_display']}",
         (row["distance2end"], row["length"] / 1000.0),
-        fontsize=5, alpha=0.8,
+        fontsize=5, alpha=0.7, color='black',
         xytext=(3, 3), textcoords="offset points"
     )
 ax.set_xscale("log")
@@ -169,15 +271,15 @@ sns.despine(ax=ax, top=True, right=True)
 fig.tight_layout()
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"1a_Telomere_vs_distance2end_log_{run_label}.{ext}"),
+        os.path.join(distance2end_dir, f"1a_Telomere_vs_distance2end_log_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 1b: End distance (log) vs Telomere length - Heatmap (all data)
+# Plot 1b: End distance (log bp) vs Telomere length - Heatmap
 # ───────────────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(6, 5.5))
+fig, ax = plt.subplots(figsize=(5, 4.5))
 df_pos = df[df["distance2end"] > 0].copy()
 h, xedges, yedges, im = ax.hist2d(
     np.log10(df_pos["distance2end"]),
@@ -188,28 +290,25 @@ h, xedges, yedges, im = ax.hist2d(
 )
 cb = plt.colorbar(im, ax=ax)
 cb.set_label("Count")
-# Add cutoff line (log10 scale)
-ax.axvline(x=np.log10(CUTOFF_1_BP), color="cyan", linestyle="--", linewidth=1)
-# Add count annotations
-ax.text(0.02, 0.98, f"≤{CUTOFF_1_BP}bp = {n_below_1}", transform=ax.transAxes,
+ax.axvline(x=np.log10(CUTOFF_BP), linestyle="--", linewidth=1, color='black')
+ax.text(0.02, 0.98, f"n={n_below_bp}", transform=ax.transAxes,
         fontsize=8, verticalalignment='top')
-ax.text(0.98, 0.98, f">{CUTOFF_1_BP}bp = {n_above_1}", transform=ax.transAxes,
+ax.text(0.98, 0.98, f"n={n_above_bp}", transform=ax.transAxes,
         fontsize=8, verticalalignment='top', horizontalalignment='right')
-# Label outliers (>100bp)
-for _, row in outliers_1.iterrows():
+for _, row in outliers_bp.iterrows():
     ax.annotate(
-        f"{row['chr']}",
-        (row["distance2end"], row["length"] / 1000.0),
-        fontsize=5, alpha=0.8,
+        f"{row['chr_display']}",
+        (np.log10(row["distance2end"]), row["length"] / 1000.0),
+        fontsize=5, alpha=0.7,
         xytext=(3, 3), textcoords="offset points"
     )
-ax.set_xlabel("Distance to end (bp)")
+ax.set_xlabel("Distance to end (log10 bp)")
 ax.set_ylabel("Telomere length (Kbp)")
 sns.despine(ax=ax, top=True, right=True)
 fig.tight_layout()
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"1b_Telomere_vs_distance2end_log_heatmap_{run_label}.{ext}"),
+        os.path.join(distance2end_dir, f"1b_Telomere_vs_distance2end_log_heatmap_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
@@ -217,12 +316,7 @@ plt.close(fig)
 # ───────────────────────────────────────────────────────────────────────────────
 # Plot 2a: End distance (% chr) vs Telomere length - Scatter by assembly
 # ───────────────────────────────────────────────────────────────────────────────
-CUTOFF_2_PCT = 0.1
-n_below_2 = len(df[df["distance2end_pct"] <= CUTOFF_2_PCT])
-n_above_2 = len(df[df["distance2end_pct"] > CUTOFF_2_PCT])
-outliers_2 = df[df["distance2end_pct"] > CUTOFF_2_PCT].copy()
-
-fig, ax = plt.subplots(figsize=(6, 5.5))
+fig, ax = plt.subplots(figsize=(5, 4.5))
 for asm in ASSEMBLY_ORDER:
     subset = df[df["assembly_label"] == asm]
     if subset.empty:
@@ -236,37 +330,34 @@ for asm in ASSEMBLY_ORDER:
         s=10,
         edgecolors="none"
     )
-# Add cutoff line
-ax.axvline(x=CUTOFF_2_PCT, color="black", linestyle="--", linewidth=1, label=f"Cutoff ({CUTOFF_2_PCT}%)")
-# Add count annotations
-ax.text(0.02, 0.98, f"n≤{CUTOFF_2_PCT}% = {n_below_2}", transform=ax.transAxes,
-        fontsize=8, verticalalignment='top', fontweight='bold')
-ax.text(0.98, 0.98, f"n>{CUTOFF_2_PCT}% = {n_above_2}", transform=ax.transAxes,
-        fontsize=8, verticalalignment='top', horizontalalignment='right', fontweight='bold')
-# Label outliers (>0.1%)
-for _, row in outliers_2.iterrows():
+ax.axvline(x=CUTOFF_PCT, color="black", linestyle="--", linewidth=1)
+ax.text(0.02, 0.98, f"n={n_below_pct}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', color='black')
+ax.text(0.98, 0.98, f"n={n_above_pct}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', horizontalalignment='right', color='black')
+for _, row in outliers_pct.iterrows():
     ax.annotate(
-        f"{row['assembly_label']}:{row['chr']}",
+        f"{row['chr_display']}",
         (row["distance2end_pct"], row["length"] / 1000.0),
-        fontsize=5, alpha=0.8,
+        fontsize=5, alpha=0.7, color='black',
         xytext=(3, 3), textcoords="offset points"
     )
-ax.set_xlabel("Distance to end (%chr)")
+ax.set_xlabel("Distance to end (% chr)")
 ax.set_ylabel("Telomere length (Kbp)")
 ax.legend(title="Assembly", fontsize=7, title_fontsize=8, markerscale=2)
 sns.despine(ax=ax, top=True, right=True)
 fig.tight_layout()
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"2a_Telomere_vs_distance2end_pct_{run_label}.{ext}"),
+        os.path.join(distance2end_dir, f"2a_Telomere_vs_distance2end_pct_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 2b: End distance (% chr) vs Telomere length - Heatmap (all data)
+# Plot 2b: End distance (% chr) vs Telomere length - Heatmap
 # ───────────────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(6, 5.5))
+fig, ax = plt.subplots(figsize=(5, 4.5))
 h, xedges, yedges, im = ax.hist2d(
     df["distance2end_pct"],
     df["length"] / 1000.0,
@@ -276,123 +367,37 @@ h, xedges, yedges, im = ax.hist2d(
 )
 cb = plt.colorbar(im, ax=ax)
 cb.set_label("Count")
-# Add cutoff line
-ax.axvline(x=CUTOFF_2_PCT, color="cyan", linestyle="--", linewidth=1.5)
-# Add count annotations
-ax.text(0.02, 0.98, f"n≤{CUTOFF_2_PCT}% = {n_below_2}", transform=ax.transAxes,
-        fontsize=8, verticalalignment='top', fontweight='bold', color='white')
-ax.text(0.98, 0.98, f"n>{CUTOFF_2_PCT}% = {n_above_2}", transform=ax.transAxes,
-        fontsize=8, verticalalignment='top', horizontalalignment='right', fontweight='bold', color='white')
-# Label outliers (>0.1%)
-for _, row in outliers_2.iterrows():
+ax.axvline(x=CUTOFF_PCT, linestyle="--", linewidth=1, color='black')
+ax.text(0.02, 0.98, f"n={n_below_pct}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top')
+ax.text(0.98, 0.98, f"n={n_above_pct}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', horizontalalignment='right')
+for _, row in outliers_pct.iterrows():
     ax.annotate(
-        f"{row['assembly_label']}:{row['chr']}",
+        f"{row['chr_display']}",
         (row["distance2end_pct"], row["length"] / 1000.0),
-        fontsize=5, alpha=0.9, color='cyan',
+        fontsize=5, alpha=0.7,
         xytext=(3, 3), textcoords="offset points"
     )
-ax.set_xlabel("Distance to end (%chr)")
+ax.set_xlabel("Distance to end (% chr)")
 ax.set_ylabel("Telomere length (Kbp)")
 sns.despine(ax=ax, top=True, right=True)
 fig.tight_layout()
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"2b_Telomere_vs_distance2end_pct_heatmap_{run_label}.{ext}"),
+        os.path.join(distance2end_dir, f"2b_Telomere_vs_distance2end_pct_heatmap_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 3a: Chromosome bars (0-100%) with telomere regions shaded by length
-# Sorted by assembly then by telomere length
+# Plot 3a: End distance (log bp) vs Canonical proportion - Scatter by assembly
 # ───────────────────────────────────────────────────────────────────────────────
-# Create a unique identifier for each chromosome entry
-df["chr_id"] = df["assembly_label"] + ":" + df["chr"]
-
-# Sort by assembly order then by length (for stacking)
-df["asm_order"] = df["assembly_label"].map({asm: i for i, asm in enumerate(ASSEMBLY_ORDER)})
-df_sorted_3 = df.sort_values(["asm_order", "length"], ascending=[True, False]).reset_index(drop=True)
-
-fig, ax = plt.subplots(figsize=(10, 8))
-bar_height = 0.8
-y_positions = range(len(df_sorted_3))
-
-# Draw chromosome bars (gray background, 0-100%)
-for i, (_, row) in enumerate(df_sorted_3.iterrows()):
-    # Gray chromosome background
-    ax.barh(i, 100, height=bar_height, color="#E0E0E0", edgecolor="none")
-    # Telomere region shaded by assembly color
-    start_pct = row["start"] / row["chr_length"] * 100
-    end_pct = row["end"] / row["chr_length"] * 100
-    ax.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-            color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
-
-ax.set_xlim(0, 100)
-ax.set_ylim(-0.5, len(df_sorted_3) - 0.5)
-ax.set_xlabel("Chromosome position (%)")
-ax.set_ylabel("Telomere entries (sorted by assembly, length)")
-ax.set_yticks([])
-# Add legend for assemblies
-handles = [plt.Rectangle((0,0),1,1, color=PALETTE[asm]) for asm in ASSEMBLY_ORDER if asm in df_sorted_3["assembly_label"].values]
-labels = [asm for asm in ASSEMBLY_ORDER if asm in df_sorted_3["assembly_label"].values]
-ax.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8, loc="upper right")
-sns.despine(ax=ax, top=True, right=True, left=True)
-fig.tight_layout()
-for ext in ["png", "pdf"]:
-    fig.savefig(
-        os.path.join(figures_dir, f"3a_Telomere_chr_bars_pct_{run_label}.{ext}"),
-        dpi=600 if ext == "png" else None
-    )
-plt.close(fig)
-
-# ───────────────────────────────────────────────────────────────────────────────
-# Plot 3b: Same as 3a but color intensity represents telomere length (Kbp)
-# ───────────────────────────────────────────────────────────────────────────────
-from matplotlib.colors import Normalize
-from matplotlib.cm import ScalarMappable
-
-fig, ax = plt.subplots(figsize=(10, 8))
-norm = Normalize(vmin=df["length"].min() / 1000, vmax=df["length"].max() / 1000)
-cmap = plt.cm.hot
-
-for i, (_, row) in enumerate(df_sorted_3.iterrows()):
-    # Gray chromosome background
-    ax.barh(i, 100, height=bar_height, color="#E0E0E0", edgecolor="none")
-    # Telomere region colored by length
-    start_pct = row["start"] / row["chr_length"] * 100
-    end_pct = row["end"] / row["chr_length"] * 100
-    color = cmap(norm(row["length"] / 1000))
-    ax.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-            color=color, edgecolor="none")
-
-ax.set_xlim(0, 100)
-ax.set_ylim(-0.5, len(df_sorted_3) - 0.5)
-ax.set_xlabel("Chromosome position (%)")
-ax.set_ylabel("Telomere entries (sorted by assembly, length)")
-ax.set_yticks([])
-# Add colorbar for length
-sm = ScalarMappable(cmap=cmap, norm=norm)
-sm.set_array([])
-cb = plt.colorbar(sm, ax=ax)
-cb.set_label("Telomere length (Kbp)")
-sns.despine(ax=ax, top=True, right=True, left=True)
-fig.tight_layout()
-for ext in ["png", "pdf"]:
-    fig.savefig(
-        os.path.join(figures_dir, f"3b_Telomere_chr_bars_pct_heatmap_{run_label}.{ext}"),
-        dpi=600 if ext == "png" else None
-    )
-plt.close(fig)
-
-# ───────────────────────────────────────────────────────────────────────────────
-# Plot 4a: End distance (log) vs Canonical proportion - Scatter by assembly
-# ───────────────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(6, 5.5))
+fig, ax = plt.subplots(figsize=(5, 4.5))
 for asm in ASSEMBLY_ORDER:
     subset = df[df["assembly_label"] == asm]
     if subset.empty:
         continue
-    # Filter out zero/negative distances for log scale
     subset = subset[subset["distance2end"] > 0]
     ax.scatter(
         subset["distance2end"],
@@ -403,6 +408,18 @@ for asm in ASSEMBLY_ORDER:
         s=10,
         edgecolors="none"
     )
+ax.axvline(x=CUTOFF_BP, color="black", linestyle="--", linewidth=1)
+ax.text(0.02, 0.98, f"n={n_below_bp}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', color='black')
+ax.text(0.98, 0.98, f"n={n_above_bp}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', horizontalalignment='right', color='black')
+for _, row in outliers_bp.iterrows():
+    ax.annotate(
+        f"{row['chr_display']}",
+        (row["distance2end"], row["canonical_pct"]),
+        fontsize=5, alpha=0.7, color='black',
+        xytext=(3, 3), textcoords="offset points"
+    )
 ax.set_xscale("log")
 ax.set_xlabel("Distance to end (bp)")
 ax.set_ylabel("Canonical proportion (%)")
@@ -411,15 +428,15 @@ sns.despine(ax=ax, top=True, right=True)
 fig.tight_layout()
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"4a_Canonical_vs_distance2end_log_{run_label}.{ext}"),
+        os.path.join(distance2end_dir, f"3a_Canonical_vs_distance2end_log_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 4b: End distance (log) vs Canonical proportion - Heatmap (all data)
+# Plot 3b: End distance (log bp) vs Canonical proportion - Heatmap
 # ───────────────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(6, 5.5))
+fig, ax = plt.subplots(figsize=(5, 4.5))
 df_pos = df[df["distance2end"] > 0].copy()
 h, xedges, yedges, im = ax.hist2d(
     np.log10(df_pos["distance2end"]),
@@ -430,21 +447,33 @@ h, xedges, yedges, im = ax.hist2d(
 )
 cb = plt.colorbar(im, ax=ax)
 cb.set_label("Count")
-ax.set_xlabel("Distance to end (log₁₀ bp)")
+ax.axvline(x=np.log10(CUTOFF_BP), linestyle="--", linewidth=1, color='black')
+ax.text(0.02, 0.98, f"n={n_below_bp}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top')
+ax.text(0.98, 0.98, f"n={n_above_bp}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', horizontalalignment='right')
+for _, row in outliers_bp.iterrows():
+    ax.annotate(
+        f"{row['chr_display']}",
+        (np.log10(row["distance2end"]), row["canonical_pct"]),
+        fontsize=5, alpha=0.7,
+        xytext=(3, 3), textcoords="offset points"
+    )
+ax.set_xlabel("Distance to end (log10 bp)")
 ax.set_ylabel("Canonical proportion (%)")
 sns.despine(ax=ax, top=True, right=True)
 fig.tight_layout()
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"4b_Canonical_vs_distance2end_log_heatmap_{run_label}.{ext}"),
+        os.path.join(distance2end_dir, f"3b_Canonical_vs_distance2end_log_heatmap_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 5a: End distance (% chr) vs Canonical proportion - Scatter by assembly
+# Plot 4a: End distance (% chr) vs Canonical proportion - Scatter by assembly
 # ───────────────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(6, 5.5))
+fig, ax = plt.subplots(figsize=(5, 4.5))
 for asm in ASSEMBLY_ORDER:
     subset = df[df["assembly_label"] == asm]
     if subset.empty:
@@ -458,22 +487,34 @@ for asm in ASSEMBLY_ORDER:
         s=10,
         edgecolors="none"
     )
-ax.set_xlabel("Distance to end (%chr)")
+ax.axvline(x=CUTOFF_PCT, color="black", linestyle="--", linewidth=1)
+ax.text(0.02, 0.98, f"n={n_below_pct}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', color='black')
+ax.text(0.98, 0.98, f"n={n_above_pct}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', horizontalalignment='right', color='black')
+for _, row in outliers_pct.iterrows():
+    ax.annotate(
+        f"{row['chr_display']}",
+        (row["distance2end_pct"], row["canonical_pct"]),
+        fontsize=5, alpha=0.7, color='black',
+        xytext=(3, 3), textcoords="offset points"
+    )
+ax.set_xlabel("Distance to end (% chr)")
 ax.set_ylabel("Canonical proportion (%)")
 ax.legend(title="Assembly", fontsize=7, title_fontsize=8, markerscale=2)
 sns.despine(ax=ax, top=True, right=True)
 fig.tight_layout()
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"5a_Canonical_vs_distance2end_pct_{run_label}.{ext}"),
+        os.path.join(distance2end_dir, f"4a_Canonical_vs_distance2end_pct_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 5b: End distance (% chr) vs Canonical proportion - Heatmap (all data)
+# Plot 4b: End distance (% chr) vs Canonical proportion - Heatmap
 # ───────────────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(6, 5.5))
+fig, ax = plt.subplots(figsize=(5, 4.5))
 h, xedges, yedges, im = ax.hist2d(
     df["distance2end_pct"],
     df["canonical_pct"],
@@ -483,229 +524,366 @@ h, xedges, yedges, im = ax.hist2d(
 )
 cb = plt.colorbar(im, ax=ax)
 cb.set_label("Count")
-ax.set_xlabel("Distance to end (%chr)")
+ax.axvline(x=CUTOFF_PCT, linestyle="--", linewidth=1, color='black')
+ax.text(0.02, 0.98, f"n={n_below_pct}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top')
+ax.text(0.98, 0.98, f"n={n_above_pct}", transform=ax.transAxes,
+        fontsize=8, verticalalignment='top', horizontalalignment='right')
+for _, row in outliers_pct.iterrows():
+    ax.annotate(
+        f"{row['chr_display']}",
+        (row["distance2end_pct"], row["canonical_pct"]),
+        fontsize=5, alpha=0.7,
+        xytext=(3, 3), textcoords="offset points"
+    )
+ax.set_xlabel("Distance to end (% chr)")
 ax.set_ylabel("Canonical proportion (%)")
 sns.despine(ax=ax, top=True, right=True)
 fig.tight_layout()
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"5b_Canonical_vs_distance2end_pct_heatmap_{run_label}.{ext}"),
+        os.path.join(distance2end_dir, f"4b_Canonical_vs_distance2end_pct_heatmap_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
-# ───────────────────────────────────────────────────────────────────────────────
-# Plot 6a: Chromosome bars (0-100%) with telomere regions shaded by assembly
-# Sorted by assembly then by canonical proportion
-# ───────────────────────────────────────────────────────────────────────────────
-df_sorted_6 = df.sort_values(["asm_order", "canonical_pct"], ascending=[True, False]).reset_index(drop=True)
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHROMOSOME POSITIONING PLOTS -> chr_positioning_dir
+# 5A/5B: Scatter plots with p-arm/q-arm side by side (Relative/Absolute)
+# 6A-D: Heatmaps: Length/Canonical × Relative/Absolute
+# ═══════════════════════════════════════════════════════════════════════════════
 
-fig, ax = plt.subplots(figsize=(10, 8))
+# Constants for arm filtering
+ARM_CUTOFF_BP = 25000  # 25 Kbp from ends
+ARM_CUTOFF_PCT = 0.05  # 0.05% from ends
+ARM_CUTOFF_KB = ARM_CUTOFF_BP / 1000  # 25 Kbp
 
-for i, (_, row) in enumerate(df_sorted_6.iterrows()):
-    # Gray chromosome background
-    ax.barh(i, 100, height=bar_height, color="#E0E0E0", edgecolor="none")
-    # Telomere region shaded by assembly color
+# Separate p-arm and q-arm telomeres
+df_p_arm = df[df["label"] == "p"].copy()
+df_q_arm = df[df["label"] == "q"].copy()
+
+# Add chromosome sort key
+df_p_arm["chr_sort"] = df_p_arm["chr_display"].apply(chr_sort_key)
+df_q_arm["chr_sort"] = df_q_arm["chr_display"].apply(chr_sort_key)
+
+# Sort by chromosome name only
+df_p_sorted = df_p_arm.sort_values("chr_sort").reset_index(drop=True)
+df_q_sorted = df_q_arm.sort_values("chr_sort").reset_index(drop=True)
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Plot 5A: Relative chr positioning (0-0.05% / 99.95-100%) - p-arm & q-arm side by side
+# ───────────────────────────────────────────────────────────────────────────────
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
+
+# p-arm (left panel)
+for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+    ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
     start_pct = row["start"] / row["chr_length"] * 100
     end_pct = row["end"] / row["chr_length"] * 100
-    ax.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-            color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
+    ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
 
-ax.set_xlim(0, 100)
-ax.set_ylim(-0.5, len(df_sorted_6) - 0.5)
-ax.set_xlabel("Chromosome position (%)")
-ax.set_ylabel("Telomere entries (sorted by assembly, canonical %)")
-ax.set_yticks([])
-# Add legend for assemblies
-handles = [plt.Rectangle((0,0),1,1, color=PALETTE[asm]) for asm in ASSEMBLY_ORDER if asm in df_sorted_6["assembly_label"].values]
-labels = [asm for asm in ASSEMBLY_ORDER if asm in df_sorted_6["assembly_label"].values]
-ax.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8, loc="upper right")
-sns.despine(ax=ax, top=True, right=True, left=True)
-fig.tight_layout()
-for ext in ["png", "pdf"]:
-    fig.savefig(
-        os.path.join(figures_dir, f"6a_Canonical_chr_bars_pct_{run_label}.{ext}"),
-        dpi=600 if ext == "png" else None
-    )
-plt.close(fig)
+ax_p.set_xlim(0, ARM_CUTOFF_PCT)
+ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
+ax_p.set_xlabel("Position (% chr)")
+ax_p.set_ylabel("Telomeres (sorted by chromosome)")
+ax_p.set_title("p-arm")
+ax_p.set_yticks([])
+ax_p.invert_xaxis()  # p-arm reads right-to-left
+sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-# ───────────────────────────────────────────────────────────────────────────────
-# Plot 6b: Same as 6a but color intensity represents canonical proportion (%)
-# ───────────────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(10, 8))
-norm_can = Normalize(vmin=df["canonical_pct"].min(), vmax=df["canonical_pct"].max())
-
-for i, (_, row) in enumerate(df_sorted_6.iterrows()):
-    # Gray chromosome background
-    ax.barh(i, 100, height=bar_height, color="#E0E0E0", edgecolor="none")
-    # Telomere region colored by canonical proportion
+# q-arm (right panel)
+for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+    ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
     start_pct = row["start"] / row["chr_length"] * 100
     end_pct = row["end"] / row["chr_length"] * 100
-    color = cmap(norm_can(row["canonical_pct"]))
-    ax.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-            color=color, edgecolor="none")
+    ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
 
-ax.set_xlim(0, 100)
-ax.set_ylim(-0.5, len(df_sorted_6) - 0.5)
-ax.set_xlabel("Chromosome position (%)")
-ax.set_ylabel("Telomere entries (sorted by assembly, canonical %)")
-ax.set_yticks([])
-# Add colorbar for canonical proportion
-sm_can = ScalarMappable(cmap=cmap, norm=norm_can)
-sm_can.set_array([])
-cb = plt.colorbar(sm_can, ax=ax)
-cb.set_label("Canonical proportion (%)")
-sns.despine(ax=ax, top=True, right=True, left=True)
+ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
+ax_q.set_xlabel("Position (% chr)")
+ax_q.set_title("q-arm")
+ax_q.set_yticks([])
+sns.despine(ax=ax_q, top=True, right=True, left=True)
+
+# Shared legend
+handles = [plt.Rectangle((0, 0), 1, 1, color=PALETTE[asm]) for asm in ASSEMBLY_ORDER
+           if asm in df["assembly_label"].values]
+labels = [asm for asm in ASSEMBLY_ORDER if asm in df["assembly_label"].values]
+fig.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8,
+           loc="upper right", bbox_to_anchor=(0.99, 0.98))
 fig.tight_layout()
+fig.subplots_adjust(right=0.88)
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"6b_Canonical_chr_bars_pct_heatmap_{run_label}.{ext}"),
+        os.path.join(chr_positioning_dir, f"5A_chr_positioning_pct_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 7a: Chromosome bars (absolute Mb) with telomere regions shaded by assembly
-# Sorted by assembly then by telomere length
+# Plot 5B: Absolute chr positioning (0-25Kbp) - p-arm & q-arm side by side
 # ───────────────────────────────────────────────────────────────────────────────
-# Sort by assembly order then by length
-df_sorted_7 = df.sort_values(["asm_order", "length"], ascending=[True, False]).reset_index(drop=True)
-max_chr_mb = df["chr_length"].max() / 1e6  # Maximum chromosome size in Mb
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
 
-fig, ax = plt.subplots(figsize=(10, 8))
+# p-arm (left panel)
+for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+    ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_kb = row["start"] / 1000
+    end_kb = row["end"] / 1000
+    ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
 
-for i, (_, row) in enumerate(df_sorted_7.iterrows()):
-    chr_len_mb = row["chr_length"] / 1e6
-    # Gray chromosome background (actual size in Mb)
-    ax.barh(i, chr_len_mb, height=bar_height, color="#E0E0E0", edgecolor="none")
-    # Telomere region shaded by assembly color
-    start_mb = row["start"] / 1e6
-    end_mb = row["end"] / 1e6
-    ax.barh(i, end_mb - start_mb, left=start_mb, height=bar_height,
-            color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
+ax_p.set_xlim(0, ARM_CUTOFF_KB)
+ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
+ax_p.set_xlabel("Position (Kbp)")
+ax_p.set_ylabel("Telomeres (sorted by chromosome)")
+ax_p.set_title("p-arm")
+ax_p.set_yticks([])
+ax_p.invert_xaxis()  # p-arm reads right-to-left
+sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-ax.set_xlim(0, max_chr_mb * 1.02)
-ax.set_ylim(-0.5, len(df_sorted_7) - 0.5)
-ax.set_xlabel("Chromosome position (Mb)")
-ax.set_ylabel("Telomere entries (sorted by assembly, length)")
-ax.set_yticks([])
-# Add legend for assemblies
-handles = [plt.Rectangle((0,0),1,1, color=PALETTE[asm]) for asm in ASSEMBLY_ORDER if asm in df_sorted_7["assembly_label"].values]
-labels = [asm for asm in ASSEMBLY_ORDER if asm in df_sorted_7["assembly_label"].values]
-ax.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8, loc="upper right")
-sns.despine(ax=ax, top=True, right=True, left=True)
+# q-arm (right panel) - normalized to distance from q-terminus
+for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+    chr_len_kb = row["chr_length"] / 1000
+    # Distance from q-terminus
+    dist_from_end_start = chr_len_kb - row["end"] / 1000
+    dist_from_end_end = chr_len_kb - row["start"] / 1000
+    ax_q.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
+    ax_q.barh(i, dist_from_end_end - dist_from_end_start, left=dist_from_end_start, height=bar_height,
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
+
+ax_q.set_xlim(0, ARM_CUTOFF_KB)
+ax_q.set_xlabel("Distance from terminus (Kbp)")
+ax_q.set_title("q-arm")
+ax_q.set_yticks([])
+sns.despine(ax=ax_q, top=True, right=True, left=True)
+
+# Shared legend
+fig.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8,
+           loc="upper right", bbox_to_anchor=(0.99, 0.98))
 fig.tight_layout()
+fig.subplots_adjust(right=0.88)
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"7a_Telomere_chr_bars_Mb_{run_label}.{ext}"),
+        os.path.join(chr_positioning_dir, f"5B_chr_positioning_Kbp_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 7b: Same as 7a but color intensity represents telomere length (Kbp)
+# Plot 6A: Heatmap - Telomere length (Kbp) × Relative positioning (%)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(10, 8))
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
 
-for i, (_, row) in enumerate(df_sorted_7.iterrows()):
-    chr_len_mb = row["chr_length"] / 1e6
-    # Gray chromosome background
-    ax.barh(i, chr_len_mb, height=bar_height, color="#E0E0E0", edgecolor="none")
-    # Telomere region colored by length
-    start_mb = row["start"] / 1e6
-    end_mb = row["end"] / 1e6
-    color = cmap(norm(row["length"] / 1000))
-    ax.barh(i, end_mb - start_mb, left=start_mb, height=bar_height,
-            color=color, edgecolor="none")
+# p-arm (left panel)
+for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+    ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_pct = row["start"] / row["chr_length"] * 100
+    end_pct = row["end"] / row["chr_length"] * 100
+    color = cmap(norm_length(row["length"] / 1000))
+    ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+              color=color, edgecolor="none")
 
-ax.set_xlim(0, max_chr_mb * 1.02)
-ax.set_ylim(-0.5, len(df_sorted_7) - 0.5)
-ax.set_xlabel("Chromosome position (Mb)")
-ax.set_ylabel("Telomere entries (sorted by assembly, length)")
-ax.set_yticks([])
-# Add colorbar for length
-sm = ScalarMappable(cmap=cmap, norm=norm)
+ax_p.set_xlim(0, ARM_CUTOFF_PCT)
+ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
+ax_p.set_xlabel("Position (% chr)")
+ax_p.set_ylabel("Telomeres (sorted by chromosome)")
+ax_p.set_title("p-arm")
+ax_p.set_yticks([])
+ax_p.invert_xaxis()
+sns.despine(ax=ax_p, top=True, right=True, left=True)
+
+# q-arm (right panel)
+for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+    ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_pct = row["start"] / row["chr_length"] * 100
+    end_pct = row["end"] / row["chr_length"] * 100
+    color = cmap(norm_length(row["length"] / 1000))
+    ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+              color=color, edgecolor="none")
+
+ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
+ax_q.set_xlabel("Position (% chr)")
+ax_q.set_title("q-arm")
+ax_q.set_yticks([])
+sns.despine(ax=ax_q, top=True, right=True, left=True)
+
+# Colorbar
+sm = ScalarMappable(cmap=cmap, norm=norm_length)
 sm.set_array([])
-cb = plt.colorbar(sm, ax=ax)
+cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+cb = fig.colorbar(sm, cax=cbar_ax)
 cb.set_label("Telomere length (Kbp)")
-sns.despine(ax=ax, top=True, right=True, left=True)
 fig.tight_layout()
+fig.subplots_adjust(right=0.90)
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"7b_Telomere_chr_bars_Mb_heatmap_{run_label}.{ext}"),
+        os.path.join(chr_positioning_dir, f"6A_Length_heatmap_pct_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 8a: Chromosome bars (absolute Mb) with telomere regions shaded by assembly
-# Sorted by assembly then by canonical proportion
+# Plot 6B: Heatmap - Telomere length (Kbp) × Absolute positioning (Kbp)
 # ───────────────────────────────────────────────────────────────────────────────
-df_sorted_8 = df.sort_values(["asm_order", "canonical_pct"], ascending=[True, False]).reset_index(drop=True)
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
 
-fig, ax = plt.subplots(figsize=(10, 8))
+# p-arm (left panel)
+for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+    ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_kb = row["start"] / 1000
+    end_kb = row["end"] / 1000
+    color = cmap(norm_length(row["length"] / 1000))
+    ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
+              color=color, edgecolor="none")
 
-for i, (_, row) in enumerate(df_sorted_8.iterrows()):
-    chr_len_mb = row["chr_length"] / 1e6
-    # Gray chromosome background
-    ax.barh(i, chr_len_mb, height=bar_height, color="#E0E0E0", edgecolor="none")
-    # Telomere region shaded by assembly color
-    start_mb = row["start"] / 1e6
-    end_mb = row["end"] / 1e6
-    ax.barh(i, end_mb - start_mb, left=start_mb, height=bar_height,
-            color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
+ax_p.set_xlim(0, ARM_CUTOFF_KB)
+ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
+ax_p.set_xlabel("Position (Kbp)")
+ax_p.set_ylabel("Telomeres (sorted by chromosome)")
+ax_p.set_title("p-arm")
+ax_p.set_yticks([])
+ax_p.invert_xaxis()
+sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-ax.set_xlim(0, max_chr_mb * 1.02)
-ax.set_ylim(-0.5, len(df_sorted_8) - 0.5)
-ax.set_xlabel("Chromosome position (Mb)")
-ax.set_ylabel("Telomere entries (sorted by assembly, canonical %)")
-ax.set_yticks([])
-# Add legend for assemblies
-handles = [plt.Rectangle((0,0),1,1, color=PALETTE[asm]) for asm in ASSEMBLY_ORDER if asm in df_sorted_8["assembly_label"].values]
-labels = [asm for asm in ASSEMBLY_ORDER if asm in df_sorted_8["assembly_label"].values]
-ax.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8, loc="upper right")
-sns.despine(ax=ax, top=True, right=True, left=True)
+# q-arm (right panel)
+for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+    chr_len_kb = row["chr_length"] / 1000
+    dist_from_end_start = chr_len_kb - row["end"] / 1000
+    dist_from_end_end = chr_len_kb - row["start"] / 1000
+    color = cmap(norm_length(row["length"] / 1000))
+    ax_q.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
+    ax_q.barh(i, dist_from_end_end - dist_from_end_start, left=dist_from_end_start, height=bar_height,
+              color=color, edgecolor="none")
+
+ax_q.set_xlim(0, ARM_CUTOFF_KB)
+ax_q.set_xlabel("Distance from terminus (Kbp)")
+ax_q.set_title("q-arm")
+ax_q.set_yticks([])
+sns.despine(ax=ax_q, top=True, right=True, left=True)
+
+# Colorbar
+sm = ScalarMappable(cmap=cmap, norm=norm_length)
+sm.set_array([])
+cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+cb = fig.colorbar(sm, cax=cbar_ax)
+cb.set_label("Telomere length (Kbp)")
 fig.tight_layout()
+fig.subplots_adjust(right=0.90)
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"8a_Canonical_chr_bars_Mb_{run_label}.{ext}"),
+        os.path.join(chr_positioning_dir, f"6B_Length_heatmap_Kbp_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 8b: Same as 8a but color intensity represents canonical proportion (%)
+# Plot 6C: Heatmap - Canonical proportion (%) × Relative positioning (%)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, ax = plt.subplots(figsize=(10, 8))
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
 
-for i, (_, row) in enumerate(df_sorted_8.iterrows()):
-    chr_len_mb = row["chr_length"] / 1e6
-    # Gray chromosome background
-    ax.barh(i, chr_len_mb, height=bar_height, color="#E0E0E0", edgecolor="none")
-    # Telomere region colored by canonical proportion
-    start_mb = row["start"] / 1e6
-    end_mb = row["end"] / 1e6
-    color = cmap(norm_can(row["canonical_pct"]))
-    ax.barh(i, end_mb - start_mb, left=start_mb, height=bar_height,
-            color=color, edgecolor="none")
+# p-arm (left panel)
+for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+    ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_pct = row["start"] / row["chr_length"] * 100
+    end_pct = row["end"] / row["chr_length"] * 100
+    color = cmap(norm_canonical(row["canonical_pct"]))
+    ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+              color=color, edgecolor="none")
 
-ax.set_xlim(0, max_chr_mb * 1.02)
-ax.set_ylim(-0.5, len(df_sorted_8) - 0.5)
-ax.set_xlabel("Chromosome position (Mb)")
-ax.set_ylabel("Telomere entries (sorted by assembly, canonical %)")
-ax.set_yticks([])
-# Add colorbar for canonical proportion
-sm_can = ScalarMappable(cmap=cmap, norm=norm_can)
+ax_p.set_xlim(0, ARM_CUTOFF_PCT)
+ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
+ax_p.set_xlabel("Position (% chr)")
+ax_p.set_ylabel("Telomeres (sorted by chromosome)")
+ax_p.set_title("p-arm")
+ax_p.set_yticks([])
+ax_p.invert_xaxis()
+sns.despine(ax=ax_p, top=True, right=True, left=True)
+
+# q-arm (right panel)
+for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+    ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_pct = row["start"] / row["chr_length"] * 100
+    end_pct = row["end"] / row["chr_length"] * 100
+    color = cmap(norm_canonical(row["canonical_pct"]))
+    ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+              color=color, edgecolor="none")
+
+ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
+ax_q.set_xlabel("Position (% chr)")
+ax_q.set_title("q-arm")
+ax_q.set_yticks([])
+sns.despine(ax=ax_q, top=True, right=True, left=True)
+
+# Colorbar
+sm_can = ScalarMappable(cmap=cmap, norm=norm_canonical)
 sm_can.set_array([])
-cb = plt.colorbar(sm_can, ax=ax)
+cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+cb = fig.colorbar(sm_can, cax=cbar_ax)
 cb.set_label("Canonical proportion (%)")
-sns.despine(ax=ax, top=True, right=True, left=True)
 fig.tight_layout()
+fig.subplots_adjust(right=0.90)
 for ext in ["png", "pdf"]:
     fig.savefig(
-        os.path.join(figures_dir, f"8b_Canonical_chr_bars_Mb_heatmap_{run_label}.{ext}"),
+        os.path.join(chr_positioning_dir, f"6C_Canonical_heatmap_pct_{run_label}.{ext}"),
         dpi=600 if ext == "png" else None
     )
 plt.close(fig)
 
-print(f"[OK] Plots saved to {figures_dir}")
+# ───────────────────────────────────────────────────────────────────────────────
+# Plot 6D: Heatmap - Canonical proportion (%) × Absolute positioning (Kbp)
+# ───────────────────────────────────────────────────────────────────────────────
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
+
+# p-arm (left panel)
+for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+    ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_kb = row["start"] / 1000
+    end_kb = row["end"] / 1000
+    color = cmap(norm_canonical(row["canonical_pct"]))
+    ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
+              color=color, edgecolor="none")
+
+ax_p.set_xlim(0, ARM_CUTOFF_KB)
+ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
+ax_p.set_xlabel("Position (Kbp)")
+ax_p.set_ylabel("Telomeres (sorted by chromosome)")
+ax_p.set_title("p-arm")
+ax_p.set_yticks([])
+ax_p.invert_xaxis()
+sns.despine(ax=ax_p, top=True, right=True, left=True)
+
+# q-arm (right panel)
+for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+    chr_len_kb = row["chr_length"] / 1000
+    dist_from_end_start = chr_len_kb - row["end"] / 1000
+    dist_from_end_end = chr_len_kb - row["start"] / 1000
+    color = cmap(norm_canonical(row["canonical_pct"]))
+    ax_q.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
+    ax_q.barh(i, dist_from_end_end - dist_from_end_start, left=dist_from_end_start, height=bar_height,
+              color=color, edgecolor="none")
+
+ax_q.set_xlim(0, ARM_CUTOFF_KB)
+ax_q.set_xlabel("Distance from terminus (Kbp)")
+ax_q.set_title("q-arm")
+ax_q.set_yticks([])
+sns.despine(ax=ax_q, top=True, right=True, left=True)
+
+# Colorbar
+sm_can = ScalarMappable(cmap=cmap, norm=norm_canonical)
+sm_can.set_array([])
+cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+cb = fig.colorbar(sm_can, cax=cbar_ax)
+cb.set_label("Canonical proportion (%)")
+fig.tight_layout()
+fig.subplots_adjust(right=0.90)
+for ext in ["png", "pdf"]:
+    fig.savefig(
+        os.path.join(chr_positioning_dir, f"6D_Canonical_heatmap_Kbp_{run_label}.{ext}"),
+        dpi=600 if ext == "png" else None
+    )
+plt.close(fig)
+
+print(f"[OK] Distance2end plots (1-4) saved to {distance2end_dir}")
+print(f"[OK] Chr positioning plots (5-6) saved to {chr_positioning_dir}")
