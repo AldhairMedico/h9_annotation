@@ -13,6 +13,11 @@ import re
 from typing import Dict
 import numpy as np
 import pandas as pd
+
+# --- headless-friendly backend (must be set before importing pyplot) ---
+import matplotlib
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.colors import Normalize
@@ -202,7 +207,7 @@ CUTOFF_BP = 100
 CUTOFF_PCT = 0.1
 
 # Setup for chromosome positioning plots
-bar_height = 0.8
+bar_height = 0.6  # compact
 cmap = plt.cm.hot
 
 # Normalizers for heatmap coloring
@@ -549,8 +554,6 @@ plt.close(fig)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CHROMOSOME POSITIONING PLOTS -> chr_positioning_dir
-# 5A/5B: Scatter plots with p-arm/q-arm side by side (Relative/Absolute)
-# 6A-D: Heatmaps: Length/Canonical × Relative/Absolute
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Constants for arm filtering
@@ -562,20 +565,28 @@ ARM_CUTOFF_KB = ARM_CUTOFF_BP / 1000  # 25 Kbp
 df_p_arm = df[df["label"] == "p"].copy()
 df_q_arm = df[df["label"] == "q"].copy()
 
-# Add chromosome sort key
+# --- sort order: assembly first, then chr_name (natural), then start ---
+ASM_SORT = {asm: i for i, asm in enumerate(ASSEMBLY_ORDER)}
+df_p_arm["assembly_sort"] = df_p_arm["assembly_label"].map(ASM_SORT).fillna(999).astype(int)
+df_q_arm["assembly_sort"] = df_q_arm["assembly_label"].map(ASM_SORT).fillna(999).astype(int)
+
 df_p_arm["chr_sort"] = df_p_arm["chr_display"].apply(chr_sort_key)
 df_q_arm["chr_sort"] = df_q_arm["chr_display"].apply(chr_sort_key)
 
-# Sort by chromosome name only
-df_p_sorted = df_p_arm.sort_values("chr_sort").reset_index(drop=True)
-df_q_sorted = df_q_arm.sort_values("chr_sort").reset_index(drop=True)
+df_p_sorted = df_p_arm.sort_values(["assembly_sort", "chr_sort", "chr_display", "start"]).reset_index(drop=True)
+df_q_sorted = df_q_arm.sort_values(["assembly_sort", "chr_sort", "chr_display", "start"]).reset_index(drop=True)
+
+_max_n = max(len(df_p_sorted), len(df_q_sorted))
+
+# Reference end (Kb) for q-arm absolute-window panels (align all chr ends)
+_chr_end_ref_kb = (df["chr_length"].max() / 1000.0)
+_chr_window_start_ref_kb = _chr_end_ref_kb - ARM_CUTOFF_KB
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 5A: Relative chr positioning (0-0.05% / 99.95-100%) - p-arm & q-arm side by side
+# Plot 5A: Relative positioning near ends (%chr)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
 
-# p-arm (left panel)
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
     ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
     start_pct = row["start"] / row["chr_length"] * 100
@@ -584,15 +595,12 @@ for i, (_, row) in enumerate(df_p_sorted.iterrows()):
               color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
 
 ax_p.set_xlim(0, ARM_CUTOFF_PCT)
-ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
-ax_p.set_xlabel("Position (% chr)")
-ax_p.set_ylabel("Telomeres (sorted by chromosome)")
+ax_p.set_ylim(-0.5, _max_n - 0.5)
+ax_p.set_xlabel("Distance to end (%chr)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
-ax_p.invert_xaxis()  # p-arm reads right-to-left
 sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-# q-arm (right panel)
 for i, (_, row) in enumerate(df_q_sorted.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
     start_pct = row["start"] / row["chr_length"] * 100
@@ -601,7 +609,8 @@ for i, (_, row) in enumerate(df_q_sorted.iterrows()):
               color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
 
 ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
-ax_q.set_xlabel("Position (% chr)")
+ax_q.set_ylim(-0.5, _max_n - 0.5)
+ax_q.set_xlabel("Distance to end (%chr)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 sns.despine(ax=ax_q, top=True, right=True, left=True)
@@ -612,8 +621,9 @@ handles = [plt.Rectangle((0, 0), 1, 1, color=PALETTE[asm]) for asm in ASSEMBLY_O
 labels = [asm for asm in ASSEMBLY_ORDER if asm in df["assembly_label"].values]
 fig.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8,
            loc="upper right", bbox_to_anchor=(0.99, 0.98))
-fig.tight_layout()
-fig.subplots_adjust(right=0.88)
+# REMOVE these (cause warnings / reduce compactness):
+# fig.tight_layout()
+# fig.subplots_adjust(right=0.88)
 for ext in ["png", "pdf"]:
     fig.savefig(
         os.path.join(chr_positioning_dir, f"5A_chr_positioning_pct_{run_label}.{ext}"),
@@ -622,11 +632,10 @@ for ext in ["png", "pdf"]:
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 5B: Absolute chr positioning (0-25Kbp) - p-arm & q-arm side by side
+# Plot 5B: Absolute positioning near ends (Kbp): 0..25 and (chr_length-25)..chr_length
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
 
-# p-arm (left panel)
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
     ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
     start_kb = row["start"] / 1000
@@ -635,26 +644,26 @@ for i, (_, row) in enumerate(df_p_sorted.iterrows()):
               color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
 
 ax_p.set_xlim(0, ARM_CUTOFF_KB)
-ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
-ax_p.set_xlabel("Position (Kbp)")
-ax_p.set_ylabel("Telomeres (sorted by chromosome)")
+ax_p.set_ylim(-0.5, _max_n - 0.5)
+ax_p.set_xlabel("Distance to end (Kbp)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
-ax_p.invert_xaxis()  # p-arm reads right-to-left
 sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-# q-arm (right panel) - normalized to distance from q-terminus
+# q-arm: plot in absolute kb positions, shifted so all chr ends align at chr_end_ref_kb
 for i, (_, row) in enumerate(df_q_sorted.iterrows()):
-    chr_len_kb = row["chr_length"] / 1000
-    # Distance from q-terminus
-    dist_from_end_start = chr_len_kb - row["end"] / 1000
-    dist_from_end_end = chr_len_kb - row["start"] / 1000
-    ax_q.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
-    ax_q.barh(i, dist_from_end_end - dist_from_end_start, left=dist_from_end_start, height=bar_height,
+    ax_q.barh(i, ARM_CUTOFF_KB, left=_chr_window_start_ref_kb, height=bar_height, color="#E0E0E0", edgecolor="none")
+    chr_end_kb = row["chr_length"] / 1000.0
+    shift_kb = _chr_end_ref_kb - chr_end_kb  # aligns end to reference end
+
+    start_kb = row["start"] / 1000.0 + shift_kb
+    end_kb = row["end"] / 1000.0 + shift_kb
+    ax_q.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
               color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
 
-ax_q.set_xlim(0, ARM_CUTOFF_KB)
-ax_q.set_xlabel("Distance from terminus (Kbp)")
+ax_q.set_xlim(_chr_window_start_ref_kb, _chr_end_ref_kb)
+ax_q.set_ylim(-0.5, _max_n - 0.5)
+ax_q.set_xlabel("Distance to end (Kbp)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 sns.despine(ax=ax_q, top=True, right=True, left=True)
@@ -662,8 +671,9 @@ sns.despine(ax=ax_q, top=True, right=True, left=True)
 # Shared legend
 fig.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8,
            loc="upper right", bbox_to_anchor=(0.99, 0.98))
-fig.tight_layout()
-fig.subplots_adjust(right=0.88)
+# REMOVE these:
+# fig.tight_layout()
+# fig.subplots_adjust(right=0.88)
 for ext in ["png", "pdf"]:
     fig.savefig(
         os.path.join(chr_positioning_dir, f"5B_chr_positioning_Kbp_{run_label}.{ext}"),
@@ -672,9 +682,9 @@ for ext in ["png", "pdf"]:
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 6A: Heatmap - Telomere length (Kbp) × Relative positioning (%)
+# Plot 6A: Heatmap (Length) × %chr near ends
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
 
 # p-arm (left panel)
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -686,9 +696,8 @@ for i, (_, row) in enumerate(df_p_sorted.iterrows()):
               color=color, edgecolor="none")
 
 ax_p.set_xlim(0, ARM_CUTOFF_PCT)
-ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
-ax_p.set_xlabel("Position (% chr)")
-ax_p.set_ylabel("Telomeres (sorted by chromosome)")
+ax_p.set_ylim(-0.5, _max_n - 0.5)
+ax_p.set_xlabel("Distance to end (%chr)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
 ax_p.invert_xaxis()
@@ -704,19 +713,18 @@ for i, (_, row) in enumerate(df_q_sorted.iterrows()):
               color=color, edgecolor="none")
 
 ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
-ax_q.set_xlabel("Position (% chr)")
+ax_q.set_ylim(-0.5, _max_n - 0.5)
+ax_q.set_xlabel("Distance to end (%chr)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
+ax_q.invert_xaxis()
 sns.despine(ax=ax_q, top=True, right=True, left=True)
 
 # Colorbar
 sm = ScalarMappable(cmap=cmap, norm=norm_length)
 sm.set_array([])
-cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
-cb = fig.colorbar(sm, cax=cbar_ax)
+cb = fig.colorbar(sm, ax=[ax_p, ax_q], fraction=0.04, pad=0.02)
 cb.set_label("Telomere length (Kbp)")
-fig.tight_layout()
-fig.subplots_adjust(right=0.90)
 for ext in ["png", "pdf"]:
     fig.savefig(
         os.path.join(chr_positioning_dir, f"6A_Length_heatmap_pct_{run_label}.{ext}"),
@@ -725,52 +733,25 @@ for ext in ["png", "pdf"]:
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 6B: Heatmap - Telomere length (Kbp) × Absolute positioning (Kbp)
+# Plot 6B: Heatmap (Length) × Kbp near ends
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
 
-# p-arm (left panel)
-for i, (_, row) in enumerate(df_p_sorted.iterrows()):
-    ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_kb = row["start"] / 1000
-    end_kb = row["end"] / 1000
-    color = cmap(norm_length(row["length"] / 1000))
-    ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
-              color=color, edgecolor="none")
-
+# p-arm: unchanged bar placement (start_kb/end_kb), but:
 ax_p.set_xlim(0, ARM_CUTOFF_KB)
-ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
-ax_p.set_xlabel("Position (Kbp)")
-ax_p.set_ylabel("Telomeres (sorted by chromosome)")
-ax_p.set_title("p-arm")
-ax_p.set_yticks([])
-ax_p.invert_xaxis()
-sns.despine(ax=ax_p, top=True, right=True, left=True)
+ax_p.set_xlabel("Distance to end (Kbp)")
+# ax_p.set_ylabel(...)  # remove
+# ax_p.invert_xaxis()   # remove
 
-# q-arm (right panel)
-for i, (_, row) in enumerate(df_q_sorted.iterrows()):
-    chr_len_kb = row["chr_length"] / 1000
-    dist_from_end_start = chr_len_kb - row["end"] / 1000
-    dist_from_end_end = chr_len_kb - row["start"] / 1000
-    color = cmap(norm_length(row["length"] / 1000))
-    ax_q.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
-    ax_q.barh(i, dist_from_end_end - dist_from_end_start, left=dist_from_end_start, height=bar_height,
-              color=color, edgecolor="none")
+# q-arm: shift positions to align ends, and plot on [_chr_window_start_ref_kb, _chr_end_ref_kb]
+# (apply same shift_kb logic used in 5B for the colored bars)
+ax_q.set_xlim(_chr_window_start_ref_kb, _chr_end_ref_kb)
+ax_q.set_xlabel("Distance to end (Kbp)")
 
-ax_q.set_xlim(0, ARM_CUTOFF_KB)
-ax_q.set_xlabel("Distance from terminus (Kbp)")
-ax_q.set_title("q-arm")
-ax_q.set_yticks([])
-sns.despine(ax=ax_q, top=True, right=True, left=True)
-
-# Colorbar
 sm = ScalarMappable(cmap=cmap, norm=norm_length)
 sm.set_array([])
-cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
-cb = fig.colorbar(sm, cax=cbar_ax)
+cb = fig.colorbar(sm, ax=[ax_p, ax_q], fraction=0.04, pad=0.02)
 cb.set_label("Telomere length (Kbp)")
-fig.tight_layout()
-fig.subplots_adjust(right=0.90)
 for ext in ["png", "pdf"]:
     fig.savefig(
         os.path.join(chr_positioning_dir, f"6B_Length_heatmap_Kbp_{run_label}.{ext}"),
@@ -779,51 +760,19 @@ for ext in ["png", "pdf"]:
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 6C: Heatmap - Canonical proportion (%) × Relative positioning (%)
+# Plot 6C: Heatmap (Canonical) × %chr near ends
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
 
-# p-arm (left panel)
-for i, (_, row) in enumerate(df_p_sorted.iterrows()):
-    ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_pct = row["start"] / row["chr_length"] * 100
-    end_pct = row["end"] / row["chr_length"] * 100
-    color = cmap(norm_canonical(row["canonical_pct"]))
-    ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=color, edgecolor="none")
+ax_p.set_xlabel("Distance to end (%chr)")
+# ax_p.set_ylabel(...)  # remove
+# ax_p.invert_xaxis()   # remove
+ax_q.set_xlabel("Distance to end (%chr)")
 
-ax_p.set_xlim(0, ARM_CUTOFF_PCT)
-ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
-ax_p.set_xlabel("Position (% chr)")
-ax_p.set_ylabel("Telomeres (sorted by chromosome)")
-ax_p.set_title("p-arm")
-ax_p.set_yticks([])
-ax_p.invert_xaxis()
-sns.despine(ax=ax_p, top=True, right=True, left=True)
-
-# q-arm (right panel)
-for i, (_, row) in enumerate(df_q_sorted.iterrows()):
-    ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_pct = row["start"] / row["chr_length"] * 100
-    end_pct = row["end"] / row["chr_length"] * 100
-    color = cmap(norm_canonical(row["canonical_pct"]))
-    ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=color, edgecolor="none")
-
-ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
-ax_q.set_xlabel("Position (% chr)")
-ax_q.set_title("q-arm")
-ax_q.set_yticks([])
-sns.despine(ax=ax_q, top=True, right=True, left=True)
-
-# Colorbar
 sm_can = ScalarMappable(cmap=cmap, norm=norm_canonical)
 sm_can.set_array([])
-cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
-cb = fig.colorbar(sm_can, cax=cbar_ax)
+cb = fig.colorbar(sm_can, ax=[ax_p, ax_q], fraction=0.04, pad=0.02)
 cb.set_label("Canonical proportion (%)")
-fig.tight_layout()
-fig.subplots_adjust(right=0.90)
 for ext in ["png", "pdf"]:
     fig.savefig(
         os.path.join(chr_positioning_dir, f"6C_Canonical_heatmap_pct_{run_label}.{ext}"),
@@ -832,52 +781,22 @@ for ext in ["png", "pdf"]:
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 6D: Heatmap - Canonical proportion (%) × Absolute positioning (Kbp)
+# Plot 6D: Heatmap (Canonical) × Kbp near ends
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(14, 8), sharey=True)
-
-# p-arm (left panel)
-for i, (_, row) in enumerate(df_p_sorted.iterrows()):
-    ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_kb = row["start"] / 1000
-    end_kb = row["end"] / 1000
-    color = cmap(norm_canonical(row["canonical_pct"]))
-    ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
-              color=color, edgecolor="none")
+fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
 
 ax_p.set_xlim(0, ARM_CUTOFF_KB)
-ax_p.set_ylim(-0.5, len(df_p_sorted) - 0.5)
-ax_p.set_xlabel("Position (Kbp)")
-ax_p.set_ylabel("Telomeres (sorted by chromosome)")
-ax_p.set_title("p-arm")
-ax_p.set_yticks([])
-ax_p.invert_xaxis()
-sns.despine(ax=ax_p, top=True, right=True, left=True)
+ax_p.set_xlabel("Distance to end (Kbp)")
+# ax_p.set_ylabel(...)  # remove
+# ax_p.invert_xaxis()   # remove
 
-# q-arm (right panel)
-for i, (_, row) in enumerate(df_q_sorted.iterrows()):
-    chr_len_kb = row["chr_length"] / 1000
-    dist_from_end_start = chr_len_kb - row["end"] / 1000
-    dist_from_end_end = chr_len_kb - row["start"] / 1000
-    color = cmap(norm_canonical(row["canonical_pct"]))
-    ax_q.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
-    ax_q.barh(i, dist_from_end_end - dist_from_end_start, left=dist_from_end_start, height=bar_height,
-              color=color, edgecolor="none")
+ax_q.set_xlim(_chr_window_start_ref_kb, _chr_end_ref_kb)
+ax_q.set_xlabel("Distance to end (Kbp)")
 
-ax_q.set_xlim(0, ARM_CUTOFF_KB)
-ax_q.set_xlabel("Distance from terminus (Kbp)")
-ax_q.set_title("q-arm")
-ax_q.set_yticks([])
-sns.despine(ax=ax_q, top=True, right=True, left=True)
-
-# Colorbar
 sm_can = ScalarMappable(cmap=cmap, norm=norm_canonical)
 sm_can.set_array([])
-cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
-cb = fig.colorbar(sm_can, cax=cbar_ax)
+cb = fig.colorbar(sm_can, ax=[ax_p, ax_q], fraction=0.04, pad=0.02)
 cb.set_label("Canonical proportion (%)")
-fig.tight_layout()
-fig.subplots_adjust(right=0.90)
 for ext in ["png", "pdf"]:
     fig.savefig(
         os.path.join(chr_positioning_dir, f"6D_Canonical_heatmap_Kbp_{run_label}.{ext}"),
