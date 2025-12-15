@@ -222,9 +222,9 @@ def chr_sort_key(chr_name: str) -> int:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Constants for arm filtering
-ARM_CUTOFF_BP = 25000  # 25 Kbp from ends
+ARM_CUTOFF_BP = 23000  # 23 Kbp from ends
 ARM_CUTOFF_PCT = 0.05  # 0.05% from ends
-ARM_CUTOFF_KB = ARM_CUTOFF_BP / 1000  # 25 Kbp
+ARM_CUTOFF_KB = ARM_CUTOFF_BP / 1000  # 23 Kbp
 
 # Separate p-arm and q-arm telomeres
 df_p_arm = df[df["label"] == "p"].copy()
