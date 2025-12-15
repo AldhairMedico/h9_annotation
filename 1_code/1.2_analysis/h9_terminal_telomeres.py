@@ -584,7 +584,7 @@ _chr_end_ref_kb = (df["chr_length"].max() / 1000.0)
 _chr_window_start_ref_kb = _chr_end_ref_kb - ARM_CUTOFF_KB
 
 def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str]) -> None:
-    """Right-side annotation strip showing assembly identity per row + block labels."""
+    """Left-side annotation strip showing assembly identity per row + block labels (name+color)."""
     ax.set_xlim(0, 1)
     ax.set_ylim(*ylim)
 
@@ -592,8 +592,7 @@ def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str])
     for i, asm in enumerate(df_sorted["assembly_label"].tolist()):
         ax.barh(i, 1, left=0, height=bar_height, color=palette.get(asm, "#CCCCCC"), edgecolor="none")
 
-    # block labels (assembly spans)
-    y0, y1 = ylim
+    # block labels: draw name centered within each assembly block (inside colored bar)
     trans = blended_transform_factory(ax.transAxes, ax.transData)
     asm_list = df_sorted["assembly_label"].tolist()
     if asm_list:
@@ -603,7 +602,8 @@ def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str])
             nxt = asm_list[i] if i < len(asm_list) else None
             if nxt != curr:
                 mid = (start + (i - 1)) / 2
-                ax.text(1.05, mid, str(curr), transform=trans, va="center", ha="left", fontsize=7, color="black")
+                ax.text(0.03, mid, str(curr), transform=trans, va="center", ha="left",
+                        fontsize=7, color="black")
                 start = i
                 curr = nxt
 
@@ -611,11 +611,10 @@ def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str])
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Plot 5A: Relative positioning near ends (%chr)
-# p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.15]}
+    gridspec_kw={"width_ratios": [0.32, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -657,11 +656,10 @@ plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Plot 5B: Absolute near ends (Kbp)
-# p: 0..25 ; q: distance-to-q-end in Kbp, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.15]}
+    gridspec_kw={"width_ratios": [0.32, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -705,9 +703,9 @@ plt.close(fig)
 # Plot 6A: Heatmap - Telomere length × %chr near ends
 # p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.15]}
+    gridspec_kw={"width_ratios": [0.32, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -755,9 +753,9 @@ plt.close(fig)
 # Plot 6B: Heatmap - Telomere length × Kbp near ends
 # p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.15]}
+    gridspec_kw={"width_ratios": [0.32, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -765,7 +763,7 @@ for i, (_, row) in enumerate(df_p_sorted.iterrows()):
     start_kb = row["start"] / 1000.0
     end_kb = row["end"] / 1000.0
     ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
-              color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
 
 ax_p.set_xlim(0, ARM_CUTOFF_KB)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
@@ -774,14 +772,15 @@ ax_p.set_title("p-arm")
 ax_p.set_yticks([])
 sns.despine(ax=ax_p, top=True, right=True, left=True)
 
+# q-arm: distance from chromosome end (Kbp)
 for i, (_, row) in enumerate(df_q_sorted.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_KB, left=0, height=bar_height, color="#E0E0E0", edgecolor="none")
     d_end_kb = (row["chr_length"] - row["end"]) / 1000.0
     d_start_kb = (row["chr_length"] - row["start"]) / 1000.0
     ax_q.barh(i, d_start_kb - d_end_kb, left=d_end_kb, height=bar_height,
-              color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
 
-ax_q.set_xlim(ARM_CUTOFF_KB, 0)
+ax_q.set_xlim(ARM_CUTOFF_KB, 0)  # 25 -> 0 (expected)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
 ax_q.set_xlabel("Distance to end (Kbp)")
 ax_q.set_title("q-arm")
@@ -805,9 +804,9 @@ plt.close(fig)
 # Plot 6C: Heatmap - Canonical proportion × %chr near ends
 # p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.15]}
+    gridspec_kw={"width_ratios": [0.32, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -855,9 +854,9 @@ plt.close(fig)
 # Plot 6D: Heatmap - Canonical proportion × Kbp near ends
 # p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.15]}
+    gridspec_kw={"width_ratios": [0.32, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
