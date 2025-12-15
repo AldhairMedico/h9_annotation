@@ -209,7 +209,7 @@ CUTOFF_PCT = 0.1
 
 # Setup for chromosome positioning plots
 bar_height = 0.6  # compact
-cmap = plt.cm.hot
+cmap = plt.cm.jet
 
 # Normalizers for heatmap coloring
 norm_length = Normalize(vmin=df["length"].min() / 1000, vmax=df["length"].max() / 1000)
@@ -614,8 +614,8 @@ def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str])
 # p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_p, ax_q, ax_asm) = plt.subplots(
-    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.15]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -660,8 +660,8 @@ plt.close(fig)
 # p: 0..25 ; q: distance-to-q-end in Kbp, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_p, ax_q, ax_asm) = plt.subplots(
-    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.15]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -706,8 +706,8 @@ plt.close(fig)
 # p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_p, ax_q, ax_asm) = plt.subplots(
-    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.15]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -756,8 +756,8 @@ plt.close(fig)
 # p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_p, ax_q, ax_asm) = plt.subplots(
-    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.15]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -806,8 +806,8 @@ plt.close(fig)
 # p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_p, ax_q, ax_asm) = plt.subplots(
-    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.15]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
@@ -856,8 +856,8 @@ plt.close(fig)
 # p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_p, ax_q, ax_asm) = plt.subplots(
-    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.15]}
 )
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
