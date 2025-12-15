@@ -19,7 +19,6 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
-import seaborn as sns
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 from matplotlib.transforms import blended_transform_factory
@@ -203,7 +202,7 @@ CUTOFF_PCT = 0.1
 
 # Setup for chromosome positioning plots
 bar_height = 0.6  # compact
-cmap = plt.cm.viridis
+cmap = plt.cm.RdYlBu  # Red-Blue colormap
 
 # Normalizers for heatmap coloring
 norm_length = Normalize(vmin=df["length"].min() / 1000, vmax=df["length"].max() / 1000)
@@ -265,9 +264,9 @@ df_q_plot[_fill_cols] = df_q_plot[_fill_cols].fillna(0)
 _max_n = len(base_rows)
 
 # --- smaller axis fonts for figs 5–6 ---
-AX_TICK_FONTSIZE = 7
-AX_LABEL_FONTSIZE = 8
-TITLE_FONTSIZE = 12
+AX_TICK_FONTSIZE = 6
+AX_LABEL_FONTSIZE = 7
+TITLE_FONTSIZE = 10
 
 def style_xaxis(ax):
     ax.tick_params(axis="x", labelsize=AX_TICK_FONTSIZE)
@@ -307,7 +306,7 @@ def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str])
             if nxt != curr:
                 mid = (start + (i - 1)) / 2
                 ax.text(
-                    1 - color_w - 0.02, mid, str(curr),
+                    1 - color_w - 0.08, mid, str(curr),
                     transform=trans, va="center", ha="right",
                     fontsize=AX_LABEL_FONTSIZE, color="black"
                 )
@@ -320,7 +319,7 @@ def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str])
 # Plot 5A: Relative positioning near ends (%chr)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    1, 3, figsize=(4, 4), sharey=True, constrained_layout=True,
     gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
@@ -338,6 +337,7 @@ ax_p.set_xlim(0, ARM_CUTOFF_PCT)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
 ax_p.set_xlabel("Distance to end (%chr)")
 ax_p.set_title("p-arm")
+ax_p.set_xticks([0.00, 0.02, 0.04])
 ax_p.set_yticks([])
 style_xaxis(ax_p)
 add_box_border(ax_p)
@@ -356,6 +356,8 @@ ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
 ax_q.set_xlabel("Distance to end (%chr)")
 ax_q.set_title("q-arm")
+ax_q.set_xticks([100 - 0.04, 100 - 0.02, 100 - 0.00])
+ax_q.set_xticklabels(['0.04', '0.02', '0.00'])
 ax_q.set_yticks([])
 style_xaxis(ax_q)
 add_box_border(ax_q)
@@ -371,7 +373,7 @@ plt.close(fig)
 # Plot 5B: Absolute near ends (Kbp) (q-arm shown as 25->0 Kbp distance-to-end)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    1, 3, figsize=(4, 4), sharey=True, constrained_layout=True,
     gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
@@ -421,7 +423,7 @@ plt.close(fig)
 # p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    1, 3, figsize=(4, 4), sharey=True, constrained_layout=True,
     gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
@@ -438,6 +440,7 @@ ax_p.set_xlim(0, ARM_CUTOFF_PCT)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
 ax_p.set_xlabel("Distance to end (%chr)")
 ax_p.set_title("p-arm")
+ax_p.set_xticks([0.00, 0.02, 0.04])
 ax_p.set_yticks([])
 style_xaxis(ax_p)
 add_box_border(ax_p)
@@ -455,6 +458,8 @@ ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
 ax_q.set_xlabel("Distance to end (%chr)")
 ax_q.set_title("q-arm")
+ax_q.set_xticks([100 - 0.04, 100 - 0.02, 100 - 0.00])
+ax_q.set_xticklabels(['0.04', '0.02', '0.00'])
 ax_q.set_yticks([])
 style_xaxis(ax_q)
 add_box_border(ax_q)
@@ -477,7 +482,7 @@ plt.close(fig)
 # p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    1, 3, figsize=(4, 4), sharey=True, constrained_layout=True,
     gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
@@ -534,7 +539,7 @@ plt.close(fig)
 # p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    1, 3, figsize=(4, 4), sharey=True, constrained_layout=True,
     gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
@@ -551,6 +556,7 @@ ax_p.set_xlim(0, ARM_CUTOFF_PCT)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
 ax_p.set_xlabel("Distance to end (%chr)")
 ax_p.set_title("p-arm")
+ax_p.set_xticks([0.00, 0.02, 0.04])
 ax_p.set_yticks([])
 style_xaxis(ax_p)
 add_box_border(ax_p)
@@ -568,6 +574,8 @@ ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
 ax_q.set_xlabel("Distance to end (%chr)")
 ax_q.set_title("q-arm")
+ax_q.set_xticks([100 - 0.04, 100 - 0.02, 100 - 0.00])
+ax_q.set_xticklabels(['0.04', '0.02', '0.00'])
 ax_q.set_yticks([])
 style_xaxis(ax_q)
 add_box_border(ax_q)
@@ -590,7 +598,7 @@ plt.close(fig)
 # p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    1, 3, figsize=(4, 4), sharey=True, constrained_layout=True,
     gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
