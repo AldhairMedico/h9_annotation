@@ -277,19 +277,19 @@ def style_xaxis(ax):
 def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str]) -> None:
     """
     Left-side annotation strip:
-      - left: color (palette)
-      - right: assembly name (right-aligned), not drawn on top of color
+      - left: assembly name (right-aligned within white region)
+      - right: color (palette)
     """
     ax.set_xlim(0, 1)
     ax.set_ylim(*ylim)
 
-    color_w = 0.18  # fraction reserved for color
-    # per-row color + white label background
+    color_w = 0.18  # fraction reserved for color (now on right side)
+    # per-row: white label background on left, color on right
     for i, asm in enumerate(df_sorted["assembly_label"].tolist()):
-        ax.barh(i, color_w, left=0, height=bar_height, color=palette.get(asm, "#CCCCCC"), edgecolor="none")
-        ax.barh(i, 1 - color_w, left=color_w, height=bar_height, color="white", edgecolor="none")
+        ax.barh(i, 1 - color_w, left=0, height=bar_height, color="white", edgecolor="none")
+        ax.barh(i, color_w, left=1 - color_w, height=bar_height, color=palette.get(asm, "#CCCCCC"), edgecolor="none")
 
-    # block labels (one per contiguous assembly block), right-aligned in the white region
+    # block labels (one per contiguous assembly block), right-aligned in the white region (left of color)
     trans = blended_transform_factory(ax.transAxes, ax.transData)
     asm_list = df_sorted["assembly_label"].tolist()
     if asm_list:
@@ -300,7 +300,7 @@ def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str])
             if nxt != curr:
                 mid = (start + (i - 1)) / 2
                 ax.text(
-                    0.98, mid, str(curr),
+                    1 - color_w - 0.02, mid, str(curr),
                     transform=trans, va="center", ha="right",
                     fontsize=AX_LABEL_FONTSIZE, color="black"
                 )
@@ -418,12 +418,14 @@ fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     gridspec_kw={"width_ratios": [0.40, 1, 1]}
 )
 
-for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+for i, (_, row) in enumerate(df_p_plot.iterrows()):
     ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_pct = row["start"] / row["chr_length"] * 100
-    end_pct = row["end"] / row["chr_length"] * 100
-    ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
+    if not row["is_placeholder"]:
+        start_pct = row["start"] / row["chr_length"] * 100
+        end_pct = row["end"] / row["chr_length"] * 100
+        if end_pct > start_pct:
+            ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+                      color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
 
 ax_p.set_xlim(0, ARM_CUTOFF_PCT)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
@@ -433,12 +435,14 @@ ax_p.set_yticks([])
 style_xaxis(ax_p)
 sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+for i, (_, row) in enumerate(df_q_plot.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_pct = row["start"] / row["chr_length"] * 100
-    end_pct = row["end"] / row["chr_length"] * 100
-    ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
+    if not row["is_placeholder"]:
+        start_pct = row["start"] / row["chr_length"] * 100
+        end_pct = row["end"] / row["chr_length"] * 100
+        if end_pct > start_pct:
+            ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+                      color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
 
 ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
@@ -448,8 +452,7 @@ ax_q.set_yticks([])
 style_xaxis(ax_q)
 sns.despine(ax=ax_q, top=True, right=True, left=True)
 
-_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
-add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
+add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
 sm = ScalarMappable(cmap=cmap, norm=norm_length)
 sm.set_array([])
@@ -471,12 +474,14 @@ fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     gridspec_kw={"width_ratios": [0.40, 1, 1]}
 )
 
-for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+for i, (_, row) in enumerate(df_p_plot.iterrows()):
     ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_kb = row["start"] / 1000.0
-    end_kb = row["end"] / 1000.0
-    ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
-              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
+    if not row["is_placeholder"]:
+        start_kb = row["start"] / 1000.0
+        end_kb = row["end"] / 1000.0
+        if end_kb > start_kb:
+            ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
+                      color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
 
 ax_p.set_xlim(0, ARM_CUTOFF_KB)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
@@ -487,12 +492,14 @@ style_xaxis(ax_p)
 sns.despine(ax=ax_p, top=True, right=True, left=True)
 
 # q-arm: distance from chromosome end (Kbp)
-for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+for i, (_, row) in enumerate(df_q_plot.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_KB, left=0, height=bar_height, color="#E0E0E0", edgecolor="none")
-    d_end_kb = (row["chr_length"] - row["end"]) / 1000.0
-    d_start_kb = (row["chr_length"] - row["start"]) / 1000.0
-    ax_q.barh(i, d_start_kb - d_end_kb, left=d_end_kb, height=bar_height,
-              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
+    if not row["is_placeholder"]:
+        d_end_kb = (row["chr_length"] - row["end"]) / 1000.0
+        d_start_kb = (row["chr_length"] - row["start"]) / 1000.0
+        if d_start_kb > d_end_kb:
+            ax_q.barh(i, d_start_kb - d_end_kb, left=d_end_kb, height=bar_height,
+                      color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
 
 ax_q.set_xlim(ARM_CUTOFF_KB, 0)  # 25 -> 0 (expected)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
@@ -502,8 +509,7 @@ ax_q.set_yticks([])
 style_xaxis(ax_q)
 sns.despine(ax=ax_q, top=True, right=True, left=True)
 
-_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
-add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
+add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
 sm = ScalarMappable(cmap=cmap, norm=norm_length)
 sm.set_array([])
@@ -525,12 +531,14 @@ fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     gridspec_kw={"width_ratios": [0.40, 1, 1]}
 )
 
-for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+for i, (_, row) in enumerate(df_p_plot.iterrows()):
     ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_pct = row["start"] / row["chr_length"] * 100
-    end_pct = row["end"] / row["chr_length"] * 100
-    ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
+    if not row["is_placeholder"]:
+        start_pct = row["start"] / row["chr_length"] * 100
+        end_pct = row["end"] / row["chr_length"] * 100
+        if end_pct > start_pct:
+            ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+                      color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
 
 ax_p.set_xlim(0, ARM_CUTOFF_PCT)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
@@ -540,12 +548,14 @@ ax_p.set_yticks([])
 style_xaxis(ax_p)
 sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+for i, (_, row) in enumerate(df_q_plot.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_pct = row["start"] / row["chr_length"] * 100
-    end_pct = row["end"] / row["chr_length"] * 100
-    ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
+    if not row["is_placeholder"]:
+        start_pct = row["start"] / row["chr_length"] * 100
+        end_pct = row["end"] / row["chr_length"] * 100
+        if end_pct > start_pct:
+            ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+                      color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
 
 ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
@@ -555,8 +565,7 @@ ax_q.set_yticks([])
 style_xaxis(ax_q)
 sns.despine(ax=ax_q, top=True, right=True, left=True)
 
-_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
-add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
+add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
 sm_can = ScalarMappable(cmap=cmap, norm=norm_canonical)
 sm_can.set_array([])
@@ -578,12 +587,14 @@ fig, (ax_asm, ax_p, ax_q) = plt.subplots(
     gridspec_kw={"width_ratios": [0.40, 1, 1]}
 )
 
-for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+for i, (_, row) in enumerate(df_p_plot.iterrows()):
     ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_kb = row["start"] / 1000.0
-    end_kb = row["end"] / 1000.0
-    ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
-              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
+    if not row["is_placeholder"]:
+        start_kb = row["start"] / 1000.0
+        end_kb = row["end"] / 1000.0
+        if end_kb > start_kb:
+            ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
+                      color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
 
 ax_p.set_xlim(0, ARM_CUTOFF_KB)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
@@ -593,12 +604,14 @@ ax_p.set_yticks([])
 style_xaxis(ax_p)
 sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+for i, (_, row) in enumerate(df_q_plot.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_KB, left=0, height=bar_height, color="#E0E0E0", edgecolor="none")
-    d_end_kb = (row["chr_length"] - row["end"]) / 1000.0
-    d_start_kb = (row["chr_length"] - row["start"]) / 1000.0
-    ax_q.barh(i, d_start_kb - d_end_kb, left=d_end_kb, height=bar_height,
-              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
+    if not row["is_placeholder"]:
+        d_end_kb = (row["chr_length"] - row["end"]) / 1000.0
+        d_start_kb = (row["chr_length"] - row["start"]) / 1000.0
+        if d_start_kb > d_end_kb:
+            ax_q.barh(i, d_start_kb - d_end_kb, left=d_end_kb, height=bar_height,
+                      color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
 
 ax_q.set_xlim(ARM_CUTOFF_KB, 0)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
@@ -608,8 +621,7 @@ ax_q.set_yticks([])
 style_xaxis(ax_q)
 sns.despine(ax=ax_q, top=True, right=True, left=True)
 
-_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
-add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
+add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
 sm_can = ScalarMappable(cmap=cmap, norm=norm_canonical)
 sm_can.set_array([])
