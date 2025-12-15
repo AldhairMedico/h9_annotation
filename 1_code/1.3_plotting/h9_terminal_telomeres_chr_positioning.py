@@ -274,6 +274,13 @@ def style_xaxis(ax):
     ax.xaxis.label.set_size(AX_LABEL_FONTSIZE)
     ax.title.set_size(TITLE_FONTSIZE)
 
+def add_box_border(ax):
+    """Add thin black box border around the plot."""
+    for spine in ax.spines.values():
+        spine.set_edgecolor('black')
+        spine.set_linewidth(0.5)
+        spine.set_visible(True)
+
 def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str]) -> None:
     """
     Left-side annotation strip:
@@ -313,8 +320,8 @@ def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str])
 # Plot 5A: Relative positioning near ends (%chr)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [0.40, 1, 1]}
+    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
 # p-arm
@@ -333,7 +340,7 @@ ax_p.set_xlabel("Distance to end (%chr)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
 style_xaxis(ax_p)
-sns.despine(ax=ax_p, top=True, right=True, left=True)
+add_box_border(ax_p)
 
 # q-arm
 for i, (_, row) in enumerate(df_q_plot.iterrows()):
@@ -351,7 +358,7 @@ ax_q.set_xlabel("Distance to end (%chr)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 style_xaxis(ax_q)
-sns.despine(ax=ax_q, top=True, right=True, left=True)
+add_box_border(ax_q)
 
 add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
@@ -364,8 +371,8 @@ plt.close(fig)
 # Plot 5B: Absolute near ends (Kbp) (q-arm shown as 25->0 Kbp distance-to-end)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [0.40, 1, 1]}
+    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_plot.iterrows()):
@@ -383,7 +390,7 @@ ax_p.set_xlabel("Distance to end (Kbp)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
 style_xaxis(ax_p)
-sns.despine(ax=ax_p, top=True, right=True, left=True)
+add_box_border(ax_p)
 
 for i, (_, row) in enumerate(df_q_plot.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_KB, left=0, height=bar_height, color="#E0E0E0", edgecolor="none")
@@ -400,7 +407,7 @@ ax_q.set_xlabel("Distance to end (Kbp)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 style_xaxis(ax_q)
-sns.despine(ax=ax_q, top=True, right=True, left=True)
+add_box_border(ax_q)
 
 add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
@@ -414,8 +421,8 @@ plt.close(fig)
 # p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [0.40, 1, 1]}
+    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_plot.iterrows()):
@@ -433,7 +440,7 @@ ax_p.set_xlabel("Distance to end (%chr)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
 style_xaxis(ax_p)
-sns.despine(ax=ax_p, top=True, right=True, left=True)
+add_box_border(ax_p)
 
 for i, (_, row) in enumerate(df_q_plot.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
@@ -450,7 +457,7 @@ ax_q.set_xlabel("Distance to end (%chr)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 style_xaxis(ax_q)
-sns.despine(ax=ax_q, top=True, right=True, left=True)
+add_box_border(ax_q)
 
 add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
@@ -470,8 +477,8 @@ plt.close(fig)
 # p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [0.40, 1, 1]}
+    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_plot.iterrows()):
@@ -489,7 +496,7 @@ ax_p.set_xlabel("Distance to end (Kbp)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
 style_xaxis(ax_p)
-sns.despine(ax=ax_p, top=True, right=True, left=True)
+add_box_border(ax_p)
 
 # q-arm: distance from chromosome end (Kbp)
 for i, (_, row) in enumerate(df_q_plot.iterrows()):
@@ -507,7 +514,7 @@ ax_q.set_xlabel("Distance to end (Kbp)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 style_xaxis(ax_q)
-sns.despine(ax=ax_q, top=True, right=True, left=True)
+add_box_border(ax_q)
 
 add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
@@ -527,8 +534,8 @@ plt.close(fig)
 # p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [0.40, 1, 1]}
+    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_plot.iterrows()):
@@ -546,7 +553,7 @@ ax_p.set_xlabel("Distance to end (%chr)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
 style_xaxis(ax_p)
-sns.despine(ax=ax_p, top=True, right=True, left=True)
+add_box_border(ax_p)
 
 for i, (_, row) in enumerate(df_q_plot.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
@@ -563,7 +570,7 @@ ax_q.set_xlabel("Distance to end (%chr)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 style_xaxis(ax_q)
-sns.despine(ax=ax_q, top=True, right=True, left=True)
+add_box_border(ax_q)
 
 add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
@@ -583,8 +590,8 @@ plt.close(fig)
 # p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
 fig, (ax_asm, ax_p, ax_q) = plt.subplots(
-    1, 3, figsize=(6.45, 4), sharey=True, constrained_layout=True,
-    gridspec_kw={"width_ratios": [0.40, 1, 1]}
+    1, 3, figsize=(5, 5), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [0.5, 1, 1]}
 )
 
 for i, (_, row) in enumerate(df_p_plot.iterrows()):
@@ -602,7 +609,7 @@ ax_p.set_xlabel("Distance to end (Kbp)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
 style_xaxis(ax_p)
-sns.despine(ax=ax_p, top=True, right=True, left=True)
+add_box_border(ax_p)
 
 for i, (_, row) in enumerate(df_q_plot.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_KB, left=0, height=bar_height, color="#E0E0E0", edgecolor="none")
@@ -619,7 +626,7 @@ ax_q.set_xlabel("Distance to end (Kbp)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 style_xaxis(ax_q)
-sns.despine(ax=ax_q, top=True, right=True, left=True)
+add_box_border(ax_q)
 
 add_assembly_bar(ax_asm, base_rows, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
