@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
+from matplotlib.transforms import blended_transform_factory
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Directory structure
@@ -582,17 +583,47 @@ _max_n = max(len(df_p_sorted), len(df_q_sorted))
 _chr_end_ref_kb = (df["chr_length"].max() / 1000.0)
 _chr_window_start_ref_kb = _chr_end_ref_kb - ARM_CUTOFF_KB
 
+def add_assembly_bar(ax, df_sorted: pd.DataFrame, ylim, palette: Dict[str, str]) -> None:
+    """Right-side annotation strip showing assembly identity per row + block labels."""
+    ax.set_xlim(0, 1)
+    ax.set_ylim(*ylim)
+
+    # row colors
+    for i, asm in enumerate(df_sorted["assembly_label"].tolist()):
+        ax.barh(i, 1, left=0, height=bar_height, color=palette.get(asm, "#CCCCCC"), edgecolor="none")
+
+    # block labels (assembly spans)
+    y0, y1 = ylim
+    trans = blended_transform_factory(ax.transAxes, ax.transData)
+    asm_list = df_sorted["assembly_label"].tolist()
+    if asm_list:
+        start = 0
+        curr = asm_list[0]
+        for i in range(1, len(asm_list) + 1):
+            nxt = asm_list[i] if i < len(asm_list) else None
+            if nxt != curr:
+                mid = (start + (i - 1)) / 2
+                ax.text(1.05, mid, str(curr), transform=trans, va="center", ha="left", fontsize=7, color="black")
+                start = i
+                curr = nxt
+
+    ax.axis("off")
+
 # ───────────────────────────────────────────────────────────────────────────────
 # Plot 5A: Relative positioning near ends (%chr)
+# p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
+fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+)
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
     ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
     start_pct = row["start"] / row["chr_length"] * 100
     end_pct = row["end"] / row["chr_length"] * 100
     ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
 
 ax_p.set_xlim(0, ARM_CUTOFF_PCT)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
@@ -606,7 +637,7 @@ for i, (_, row) in enumerate(df_q_sorted.iterrows()):
     start_pct = row["start"] / row["chr_length"] * 100
     end_pct = row["end"] / row["chr_length"] * 100
     ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
 
 ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
@@ -615,33 +646,30 @@ ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 sns.despine(ax=ax_q, top=True, right=True, left=True)
 
-# Shared legend
-handles = [plt.Rectangle((0, 0), 1, 1, color=PALETTE[asm]) for asm in ASSEMBLY_ORDER
-           if asm in df["assembly_label"].values]
-labels = [asm for asm in ASSEMBLY_ORDER if asm in df["assembly_label"].values]
-fig.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8,
-           loc="upper right", bbox_to_anchor=(0.99, 0.98))
-# REMOVE these (cause warnings / reduce compactness):
-# fig.tight_layout()
-# fig.subplots_adjust(right=0.88)
+# assembly strip (use whichever side has more rows)
+_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
+add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
+
 for ext in ["png", "pdf"]:
-    fig.savefig(
-        os.path.join(chr_positioning_dir, f"5A_chr_positioning_pct_{run_label}.{ext}"),
-        dpi=600 if ext == "png" else None
-    )
+    fig.savefig(os.path.join(chr_positioning_dir, f"5A_chr_positioning_pct_{run_label}.{ext}"),
+                dpi=600 if ext == "png" else None)
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 5B: Absolute positioning near ends (Kbp): 0..25 and (chr_length-25)..chr_length
+# Plot 5B: Absolute near ends (Kbp)
+# p: 0..25 ; q: distance-to-q-end in Kbp, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
+fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+)
 
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
     ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
-    start_kb = row["start"] / 1000
-    end_kb = row["end"] / 1000
+    start_kb = row["start"] / 1000.0
+    end_kb = row["end"] / 1000.0
     ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
-              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
 
 ax_p.set_xlim(0, ARM_CUTOFF_KB)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
@@ -650,158 +678,227 @@ ax_p.set_title("p-arm")
 ax_p.set_yticks([])
 sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-# q-arm: plot in absolute kb positions, shifted so all chr ends align at chr_end_ref_kb
+# q-arm: distance from chromosome end (Kbp)
 for i, (_, row) in enumerate(df_q_sorted.iterrows()):
-    ax_q.barh(i, ARM_CUTOFF_KB, left=_chr_window_start_ref_kb, height=bar_height, color="#E0E0E0", edgecolor="none")
-    chr_end_kb = row["chr_length"] / 1000.0
-    shift_kb = _chr_end_ref_kb - chr_end_kb  # aligns end to reference end
+    ax_q.barh(i, ARM_CUTOFF_KB, left=0, height=bar_height, color="#E0E0E0", edgecolor="none")
+    d_end_kb = (row["chr_length"] - row["end"]) / 1000.0
+    d_start_kb = (row["chr_length"] - row["start"]) / 1000.0
+    ax_q.barh(i, d_start_kb - d_end_kb, left=d_end_kb, height=bar_height,
+              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.9)
 
-    start_kb = row["start"] / 1000.0 + shift_kb
-    end_kb = row["end"] / 1000.0 + shift_kb
-    ax_q.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
-              color=PALETTE[row["assembly_label"]], edgecolor="none", alpha=0.8)
-
-ax_q.set_xlim(_chr_window_start_ref_kb, _chr_end_ref_kb)
+ax_q.set_xlim(ARM_CUTOFF_KB, 0)  # 25 -> 0 (expected)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
 ax_q.set_xlabel("Distance to end (Kbp)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
 sns.despine(ax=ax_q, top=True, right=True, left=True)
 
-# Shared legend
-fig.legend(handles, labels, title="Assembly", fontsize=7, title_fontsize=8,
-           loc="upper right", bbox_to_anchor=(0.99, 0.98))
-# REMOVE these:
-# fig.tight_layout()
-# fig.subplots_adjust(right=0.88)
+_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
+add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
+
 for ext in ["png", "pdf"]:
-    fig.savefig(
-        os.path.join(chr_positioning_dir, f"5B_chr_positioning_Kbp_{run_label}.{ext}"),
-        dpi=600 if ext == "png" else None
-    )
+    fig.savefig(os.path.join(chr_positioning_dir, f"5B_chr_positioning_Kbp_{run_label}.{ext}"),
+                dpi=600 if ext == "png" else None)
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 6A: Heatmap (Length) × %chr near ends
+# Plot 6A: Heatmap - Telomere length × %chr near ends
+# p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
+fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+)
 
-# p-arm (left panel)
 for i, (_, row) in enumerate(df_p_sorted.iterrows()):
     ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
     start_pct = row["start"] / row["chr_length"] * 100
     end_pct = row["end"] / row["chr_length"] * 100
-    color = cmap(norm_length(row["length"] / 1000))
     ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=color, edgecolor="none")
+              color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
 
 ax_p.set_xlim(0, ARM_CUTOFF_PCT)
 ax_p.set_ylim(-0.5, _max_n - 0.5)
 ax_p.set_xlabel("Distance to end (%chr)")
 ax_p.set_title("p-arm")
 ax_p.set_yticks([])
-ax_p.invert_xaxis()
 sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-# q-arm (right panel)
 for i, (_, row) in enumerate(df_q_sorted.iterrows()):
     ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
     start_pct = row["start"] / row["chr_length"] * 100
     end_pct = row["end"] / row["chr_length"] * 100
-    color = cmap(norm_length(row["length"] / 1000))
     ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
-              color=color, edgecolor="none")
+              color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
 
 ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
 ax_q.set_ylim(-0.5, _max_n - 0.5)
 ax_q.set_xlabel("Distance to end (%chr)")
 ax_q.set_title("q-arm")
 ax_q.set_yticks([])
-ax_q.invert_xaxis()
 sns.despine(ax=ax_q, top=True, right=True, left=True)
 
-# Colorbar
+_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
+add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
+
 sm = ScalarMappable(cmap=cmap, norm=norm_length)
 sm.set_array([])
 cb = fig.colorbar(sm, ax=[ax_p, ax_q], fraction=0.04, pad=0.02)
 cb.set_label("Telomere length (Kbp)")
+
 for ext in ["png", "pdf"]:
-    fig.savefig(
-        os.path.join(chr_positioning_dir, f"6A_Length_heatmap_pct_{run_label}.{ext}"),
-        dpi=600 if ext == "png" else None
-    )
+    fig.savefig(os.path.join(chr_positioning_dir, f"6A_Length_heatmap_pct_{run_label}.{ext}"),
+                dpi=600 if ext == "png" else None)
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 6B: Heatmap (Length) × Kbp near ends
+# Plot 6B: Heatmap - Telomere length × Kbp near ends
+# p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
+fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+)
 
-# p-arm: unchanged bar placement (start_kb/end_kb), but:
+for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+    ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_kb = row["start"] / 1000.0
+    end_kb = row["end"] / 1000.0
+    ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
+              color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
+
 ax_p.set_xlim(0, ARM_CUTOFF_KB)
+ax_p.set_ylim(-0.5, _max_n - 0.5)
 ax_p.set_xlabel("Distance to end (Kbp)")
-# ax_p.set_ylabel(...)  # remove
-# ax_p.invert_xaxis()   # remove
+ax_p.set_title("p-arm")
+ax_p.set_yticks([])
+sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-# q-arm: shift positions to align ends, and plot on [_chr_window_start_ref_kb, _chr_end_ref_kb]
-# (apply same shift_kb logic used in 5B for the colored bars)
-ax_q.set_xlim(_chr_window_start_ref_kb, _chr_end_ref_kb)
+for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+    ax_q.barh(i, ARM_CUTOFF_KB, left=0, height=bar_height, color="#E0E0E0", edgecolor="none")
+    d_end_kb = (row["chr_length"] - row["end"]) / 1000.0
+    d_start_kb = (row["chr_length"] - row["start"]) / 1000.0
+    ax_q.barh(i, d_start_kb - d_end_kb, left=d_end_kb, height=bar_height,
+              color=cmap(norm_length(row["length"] / 1000.0)), edgecolor="none")
+
+ax_q.set_xlim(ARM_CUTOFF_KB, 0)
+ax_q.set_ylim(-0.5, _max_n - 0.5)
 ax_q.set_xlabel("Distance to end (Kbp)")
+ax_q.set_title("q-arm")
+ax_q.set_yticks([])
+sns.despine(ax=ax_q, top=True, right=True, left=True)
+
+_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
+add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
 sm = ScalarMappable(cmap=cmap, norm=norm_length)
 sm.set_array([])
 cb = fig.colorbar(sm, ax=[ax_p, ax_q], fraction=0.04, pad=0.02)
 cb.set_label("Telomere length (Kbp)")
+
 for ext in ["png", "pdf"]:
-    fig.savefig(
-        os.path.join(chr_positioning_dir, f"6B_Length_heatmap_Kbp_{run_label}.{ext}"),
-        dpi=600 if ext == "png" else None
-    )
+    fig.savefig(os.path.join(chr_positioning_dir, f"6B_Length_heatmap_Kbp_{run_label}.{ext}"),
+                dpi=600 if ext == "png" else None)
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 6C: Heatmap (Canonical) × %chr near ends
+# Plot 6C: Heatmap - Canonical proportion × %chr near ends
+# p: 0..0.05 ; q: 99.95..100 (NOT inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
+fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+)
 
+for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+    ax_p.barh(i, ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_pct = row["start"] / row["chr_length"] * 100
+    end_pct = row["end"] / row["chr_length"] * 100
+    ax_p.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+              color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
+
+ax_p.set_xlim(0, ARM_CUTOFF_PCT)
+ax_p.set_ylim(-0.5, _max_n - 0.5)
 ax_p.set_xlabel("Distance to end (%chr)")
-# ax_p.set_ylabel(...)  # remove
-# ax_p.invert_xaxis()   # remove
+ax_p.set_title("p-arm")
+ax_p.set_yticks([])
+sns.despine(ax=ax_p, top=True, right=True, left=True)
+
+for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+    ax_q.barh(i, ARM_CUTOFF_PCT, left=100 - ARM_CUTOFF_PCT, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_pct = row["start"] / row["chr_length"] * 100
+    end_pct = row["end"] / row["chr_length"] * 100
+    ax_q.barh(i, end_pct - start_pct, left=start_pct, height=bar_height,
+              color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
+
+ax_q.set_xlim(100 - ARM_CUTOFF_PCT, 100)
+ax_q.set_ylim(-0.5, _max_n - 0.5)
 ax_q.set_xlabel("Distance to end (%chr)")
+ax_q.set_title("q-arm")
+ax_q.set_yticks([])
+sns.despine(ax=ax_q, top=True, right=True, left=True)
+
+_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
+add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
 sm_can = ScalarMappable(cmap=cmap, norm=norm_canonical)
 sm_can.set_array([])
 cb = fig.colorbar(sm_can, ax=[ax_p, ax_q], fraction=0.04, pad=0.02)
 cb.set_label("Canonical proportion (%)")
+
 for ext in ["png", "pdf"]:
-    fig.savefig(
-        os.path.join(chr_positioning_dir, f"6C_Canonical_heatmap_pct_{run_label}.{ext}"),
-        dpi=600 if ext == "png" else None
-    )
+    fig.savefig(os.path.join(chr_positioning_dir, f"6C_Canonical_heatmap_pct_{run_label}.{ext}"),
+                dpi=600 if ext == "png" else None)
 plt.close(fig)
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Plot 6D: Heatmap (Canonical) × Kbp near ends
+# Plot 6D: Heatmap - Canonical proportion × Kbp near ends
+# p: 0..25 ; q: distance-to-q-end, axis 25..0 (inverted)
 # ───────────────────────────────────────────────────────────────────────────────
-fig, (ax_p, ax_q) = plt.subplots(1, 2, figsize=(9, 4.5), sharey=True, constrained_layout=True)
+fig, (ax_p, ax_q, ax_asm) = plt.subplots(
+    1, 3, figsize=(8.4, 4.2), sharey=True, constrained_layout=True,
+    gridspec_kw={"width_ratios": [1, 1, 0.28]}
+)
+
+for i, (_, row) in enumerate(df_p_sorted.iterrows()):
+    ax_p.barh(i, ARM_CUTOFF_KB, height=bar_height, color="#E0E0E0", edgecolor="none")
+    start_kb = row["start"] / 1000.0
+    end_kb = row["end"] / 1000.0
+    ax_p.barh(i, end_kb - start_kb, left=start_kb, height=bar_height,
+              color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
 
 ax_p.set_xlim(0, ARM_CUTOFF_KB)
+ax_p.set_ylim(-0.5, _max_n - 0.5)
 ax_p.set_xlabel("Distance to end (Kbp)")
-# ax_p.set_ylabel(...)  # remove
-# ax_p.invert_xaxis()   # remove
+ax_p.set_title("p-arm")
+ax_p.set_yticks([])
+sns.despine(ax=ax_p, top=True, right=True, left=True)
 
-ax_q.set_xlim(_chr_window_start_ref_kb, _chr_end_ref_kb)
+for i, (_, row) in enumerate(df_q_sorted.iterrows()):
+    ax_q.barh(i, ARM_CUTOFF_KB, left=0, height=bar_height, color="#E0E0E0", edgecolor="none")
+    d_end_kb = (row["chr_length"] - row["end"]) / 1000.0
+    d_start_kb = (row["chr_length"] - row["start"]) / 1000.0
+    ax_q.barh(i, d_start_kb - d_end_kb, left=d_end_kb, height=bar_height,
+              color=cmap(norm_canonical(row["canonical_pct"])), edgecolor="none")
+
+ax_q.set_xlim(ARM_CUTOFF_KB, 0)
+ax_q.set_ylim(-0.5, _max_n - 0.5)
 ax_q.set_xlabel("Distance to end (Kbp)")
+ax_q.set_title("q-arm")
+ax_q.set_yticks([])
+sns.despine(ax=ax_q, top=True, right=True, left=True)
+
+_bar_df = df_p_sorted if len(df_p_sorted) >= len(df_q_sorted) else df_q_sorted
+add_assembly_bar(ax_asm, _bar_df, ylim=(-0.5, _max_n - 0.5), palette=PALETTE)
 
 sm_can = ScalarMappable(cmap=cmap, norm=norm_canonical)
 sm_can.set_array([])
 cb = fig.colorbar(sm_can, ax=[ax_p, ax_q], fraction=0.04, pad=0.02)
 cb.set_label("Canonical proportion (%)")
+
 for ext in ["png", "pdf"]:
-    fig.savefig(
-        os.path.join(chr_positioning_dir, f"6D_Canonical_heatmap_Kbp_{run_label}.{ext}"),
-        dpi=600 if ext == "png" else None
-    )
+    fig.savefig(os.path.join(chr_positioning_dir, f"6D_Canonical_heatmap_Kbp_{run_label}.{ext}"),
+                dpi=600 if ext == "png" else None)
 plt.close(fig)
 
 print(f"[OK] Distance2end plots (1-4) saved to {distance2end_dir}")
