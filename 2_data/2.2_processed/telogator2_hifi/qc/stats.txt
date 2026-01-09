@@ -1,0 +1,4 @@
+ - 37 final telomere alleles (208 reads)
+ - 0 alleles unmapped (0 reads)
+ - 0 alleles with atl < 100 bp (0 reads)
+ - 3 interstitial alelles (16 reads)
