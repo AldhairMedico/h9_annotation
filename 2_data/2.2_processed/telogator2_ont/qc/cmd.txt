@@ -1,0 +1,1 @@
+telogator2.py -i 06_21_23_06_28_23_R1041_H9_UL.dorado_0.8.1_5mC_5hmC.fastq.gz 11_20_2024_R1041_UL_H9.dorado_0.8.1_sup.5mC_5hmC.fastq.gz -o telogator2_ont -r ont -n 4 -p 32
