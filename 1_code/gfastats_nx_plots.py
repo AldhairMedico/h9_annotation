@@ -144,7 +144,7 @@ def plot_nx(data: Dict[str, Tuple[List[float], List[float]]],
         nx_type: 'Contig' or 'Scaffold'
         output_path: Path to save the figure
     """
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(6, 6))
 
     # Sort by palette order for consistent legend
     palette_order = list(PALETTE.keys())
@@ -153,15 +153,15 @@ def plot_nx(data: Dict[str, Tuple[List[float], List[float]]],
 
     for name in sorted_names:
         nx_pct, lengths = data[name]
-        color = PALETTE.get(name, "#000000")
-        ax.plot(nx_pct, lengths, label=name, color=color, linewidth=2)
+        color = PALETTE.get(name, "#8D8D8D")
+        ax.plot(nx_pct, lengths, label=name, color=color, linewidth=2, rasterized=True)
 
     ax.set_xlabel("Nx (%)", fontsize=12)
     ax.set_ylabel(f"{nx_type} length (bp)", fontsize=12)
     ax.set_yscale('log')
     ax.set_xlim(0, 100)
     ax.set_title(f"{nx_type} Nx Plot", fontsize=14)
-    ax.legend(loc='upper right', fontsize=9)
+    ax.legend(loc='lower left', fontsize=9)
     ax.grid(True, alpha=0.3)
 
     plt.tight_layout()
