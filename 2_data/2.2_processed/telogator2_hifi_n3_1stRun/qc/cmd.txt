@@ -1,0 +1,1 @@
+telogator2.py -i m84091_241205_180120_s2.hifi_reads.bc1003.fastq.gz m84091_241209_213135_s3.hifi_reads.bc1003.fastq.gz m84091_241209_233055_s4.hifi_reads.bc1003.fastq.gz -o telogator2_hifi_n3 -r hifi -n 3 -p 32

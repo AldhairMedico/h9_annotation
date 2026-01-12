@@ -14,8 +14,8 @@ set -euo pipefail
 
 # ---- compact base ----
 WD="/lustre/fs5/vgl/scratch/amedico/h9_annotation"
-INPUT_DIR="${WD}/2_data/2.1_raw"
-OUTPUT_DIR="${WD}/2_data/2.2_processed/telogator2_hifi"
+INPUT_DIR="${WD}/2_data/2.1_raw/hifi"
+OUTPUT_DIR="${WD}/2_data/2.2_processed/telogator2_hifi_n3"
 TELOGATOR2_DIR="/lustre/fs5/vgl/scratch/amedico/tools/telogator2"
 
 mkdir -p "$OUTPUT_DIR"
@@ -23,7 +23,7 @@ cd "$WD"
 
 # ---- params ----
 READ_TYPE="${READ_TYPE:-hifi}"
-MIN_CLUSTER_READS="${MIN_CLUSTER_READS:-4}"
+MIN_CLUSTER_READS="${MIN_CLUSTER_READS:-3}"
 
 # ---- inputs (array-safe) ----
 INPUTS=(
@@ -37,4 +37,5 @@ python "${TELOGATOR2_DIR}/telogator2.py" \
   -i "${INPUTS[@]}" \
   -o "$OUTPUT_DIR" \
   -r "$READ_TYPE" \
-  -n "$MIN_CLUSTER_READS"
+  -n "$MIN_CLUSTER_READS" \
+  -p 32
