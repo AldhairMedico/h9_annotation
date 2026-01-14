@@ -42,30 +42,16 @@
 # │   │   │   ├── tlens_by_allele.tsv
 # │   │   │   └── violin_atl.png
 
-# We have to compare telomere lengths from Teloscope and Telogator2 on a scatter plots.
-# Files used:
-# 1. Teloscope:
-# h9_annotation/2_data/2.2_processed/teloscope/H9_T2T_v0.1_hap1.fasta_terminal_telomeres.bed
-# h9_annotation/2_data/2.2_processed/teloscope/H9_T2T_v0.1_hap2.fasta_terminal_telomeres.bed
-
-# Row format: chr, start, end, length, label, fwdCounts, revCounts, canCounts, nonCanCounts, chrSize
-# Row example: chr1_hap1	5	4540	4535	p	753	0	731	22	250382078
-# Note: We need to extract the chrNum from chr so by adding the label it's comparable to Telogator2 nomenclature.
-
-# 2. Telogator2:
-# h9_annotation/2_data/2.2_processed/26.01.07_telogator2_hifi_default/tlens_by_allele.tsv
-# h9_annotation/2_data/2.2_processed/26.01.08_telogator2_ont_default/tlens_by_allele.tsv
-
-# Columns of interest: #chr, TL_p75, tvr_len
-# Example of #chr: chr1p (equivalent to chrNum and label in Teloscope)
-
-# Plot 1: Teloscope vs Telogator2 HiFi
-# 1A: Teloscope length vs Telogator2 HiFi "TL_p75"
-# 1B: Teloscope length vs Telogator2 HiFi "TL_p75"+"tvr_len"
-# Plot 2: Teloscope vs Telogator2 ONT
-# 2A: Teloscope length vs Telogator2 ONT "TL_p75"
-# 2B: Teloscope length vs Telogator2 ONT "TL_p75"+"tvr_len"
-# Save plots at: h9_annotation/3_figures/3.1_draft/26.01.09_teloscope_vs_telogator2
+# Compare telomere lengths from Teloscope (assembly-based) vs Telogator2 (read-based).
+#
+# Teloscope: measures TL directly from assembled genome
+# Telogator2: measures TL from individual reads, reports sorted list in "read_TLs" column
+#
+# We compute from read_TLs: TL_p75, TL_p90, TL_max
+# We compare: TL alone and TL+TVR (telomere variant repeats)
+# We report: Pearson and Spearman correlations
+#
+# Output: 12 plots (3 percentiles x 2 metrics x 2 correlations)
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -73,10 +59,28 @@ import numpy as np
 from pathlib import Path
 from scipy import stats
 
+# Science-ready plot style
+plt.rcParams.update({
+    'font.family': 'sans-serif',
+    'font.sans-serif': ['Arial', 'Helvetica', 'DejaVu Sans'],
+    'font.size': 10,
+    'axes.linewidth': 1.2,
+    'axes.spines.top': False,
+    'axes.spines.right': False,
+    'xtick.major.width': 1.2,
+    'ytick.major.width': 1.2,
+    'xtick.major.size': 5,
+    'ytick.major.size': 5,
+    'figure.dpi': 150,
+    'savefig.dpi': 300,
+    'savefig.bbox': 'tight',
+    'savefig.pad_inches': 0.1,
+})
+
 # Define paths
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "2_data" / "2.2_processed"
-OUTPUT_DIR = BASE_DIR / "3_figures" / "3.1_draft" / "26.01.09_teloscope_vs_telogator2"
+OUTPUT_DIR = BASE_DIR / "3_figures" / "3.1_draft" / "26.01.12_teloscope_vs_telogator2"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Teloscope files
@@ -106,83 +110,126 @@ def load_teloscope_data(hap1_path: Path, hap2_path: Path) -> pd.DataFrame:
     return df[["teloscope_key", "length", "chr"]].rename(columns={"length": "teloscope_length"})
 
 
+def parse_read_tls(read_tls_str: str) -> list:
+    """Parse the read_TLs column into a list of integers."""
+    return [int(x) for x in read_tls_str.split(",")]
+
+
 def load_telogator2_data(filepath: Path) -> pd.DataFrame:
-    """Load Telogator2 data and aggregate by chromosome arm."""
+    """Load Telogator2 data and compute TL statistics from read_TLs column.
+
+    Each row has a sorted list of TL measurements in read_TLs (e.g., "-267,-13,2882,2984").
+    We compute: TL_p75, TL_p90, TL_max from these values.
+
+    Note: Telogator2 may report multiple alleles per chromosome arm (different ref_samp).
+    We aggregate by chromosome arm taking median across alleles.
+    """
     df = pd.read_csv(filepath, sep="\t")
 
-    # Group by chromosome arm and get median TL_p75 and tvr_len
+    # Skip rows with multiple chr assignments (e.g., "chr5q,chr1p")
+    df = df[~df["#chr"].str.contains(",", na=False)].copy()
+
+    # Parse read_TLs and compute percentiles for each row
+    df["read_TLs_parsed"] = df["read_TLs"].apply(parse_read_tls)
+    df["TL_p75"] = df["read_TLs_parsed"].apply(lambda x: np.percentile(x, 75))
+    df["TL_p90"] = df["read_TLs_parsed"].apply(lambda x: np.percentile(x, 90))
+    df["TL_max"] = df["read_TLs_parsed"].apply(lambda x: max(x))
+
+    # Aggregate by chromosome arm (median across multiple alleles)
     agg_df = df.groupby("#chr").agg({
         "TL_p75": "median",
+        "TL_p90": "median",
+        "TL_max": "median",
         "tvr_len": "median"
     }).reset_index()
 
-    agg_df["TL_p75_plus_tvr"] = agg_df["TL_p75"] + agg_df["tvr_len"]
     agg_df = agg_df.rename(columns={"#chr": "telogator_key"})
+
+    # Compute TL + TVR for each percentile
+    agg_df["TL_p75_plus_tvr"] = agg_df["TL_p75"] + agg_df["tvr_len"]
+    agg_df["TL_p90_plus_tvr"] = agg_df["TL_p90"] + agg_df["tvr_len"]
+    agg_df["TL_max_plus_tvr"] = agg_df["TL_max"] + agg_df["tvr_len"]
 
     return agg_df
 
 
 def create_scatter_plot(teloscope_df: pd.DataFrame, telogator_df: pd.DataFrame,
-                        telogator_col: str, title: str, output_path: Path,
-                        y_label: str):
-    """Create a scatter plot comparing Teloscope vs Telogator2."""
-    # Merge data
+                        telogator_col: str, output_path: Path, y_label: str,
+                        correlation_type: str = "pearson"):
+    """Create a minimalist science-ready scatter plot.
+
+    Args:
+        correlation_type: "pearson" or "spearman"
+    """
     merged = teloscope_df.merge(telogator_df, left_on="teloscope_key",
-                                 right_on="telogator_key", how="inner")
+                                right_on="telogator_key", how="inner")
 
     if merged.empty:
-        print(f"Warning: No matching data for {title}")
-        return
+        print(f"Warning: No matching data for {output_path.name}")
+        return None
 
-    x = merged["teloscope_length"]
-    y = merged[telogator_col]
+    x = merged["teloscope_length"].values
+    y = merged[telogator_col].values
 
-    # Calculate correlation
-    r, p_value = stats.pearsonr(x, y)
+    # Compute correlations
+    if correlation_type == "pearson":
+        r, p_value = stats.pearsonr(x, y)
+        corr_label = "r"
+    else:
+        r, p_value = stats.spearmanr(x, y)
+        corr_label = "ρ"
 
-    # Calculate linear regression
+    # Linear regression for trend line
     slope, intercept, _, _, _ = stats.linregress(x, y)
 
-    # Create plot
-    fig, ax = plt.subplots(figsize=(8, 8))
+    # Create figure
+    fig, ax = plt.subplots(figsize=(4.5, 4.5))
 
-    ax.scatter(x, y, alpha=0.7, edgecolors="black", linewidth=0.5, s=60)
+    # Scatter points
+    ax.scatter(x, y, s=40, c="#2C3E50", alpha=0.7, edgecolors="white",
+               linewidth=0.5, zorder=3)
 
-    # Add regression line
-    x_line = np.array([x.min(), x.max()])
-    y_line = slope * x_line + intercept
-    ax.plot(x_line, y_line, "r--", linewidth=1.5, label=f"Linear fit")
+    # Regression line
+    x_range = np.array([x.min(), x.max()])
+    ax.plot(x_range, slope * x_range + intercept, color="#E74C3C",
+            linewidth=1.5, linestyle="-", zorder=2)
 
-    # Add identity line (y=x)
-    max_val = max(x.max(), y.max())
-    min_val = min(x.min(), y.min())
-    ax.plot([min_val, max_val], [min_val, max_val], "k:", linewidth=1, alpha=0.5, label="y = x")
+    # Identity line (y=x)
+    lims = [min(x.min(), y.min()), max(x.max(), y.max())]
+    ax.plot(lims, lims, color="#95A5A6", linewidth=1, linestyle="--",
+            alpha=0.8, zorder=1)
 
-    # Add labels for each point
-    for _, row in merged.iterrows():
-        ax.annotate(row["teloscope_key"].replace("chr", ""),
-                   (row["teloscope_length"], row[telogator_col]),
-                   fontsize=7, alpha=0.7, ha="left", va="bottom")
+    # Axis labels
+    ax.set_xlabel("Teloscope (bp)", fontsize=11, fontweight="medium")
+    ax.set_ylabel(y_label, fontsize=11, fontweight="medium")
 
-    ax.set_xlabel("Teloscope Length (bp)", fontsize=12)
-    ax.set_ylabel(y_label, fontsize=12)
-    ax.set_title(f"{title}\n(r = {r:.3f}, p = {p_value:.2e}, n = {len(merged)})", fontsize=12)
-    ax.legend(loc="upper left")
+    # Correlation annotation (bottom-right corner)
+    corr_text = f"{corr_label} = {r:.2f}\np = {p_value:.1e}\nn = {len(merged)}"
+    ax.text(0.97, 0.03, corr_text, transform=ax.transAxes, fontsize=9,
+            verticalalignment="bottom", horizontalalignment="right",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                      edgecolor="#BDC3C7", alpha=0.9))
 
-    # Equal aspect ratio
-    ax.set_aspect("equal", adjustable="box")
+    # Clean up axes
+    ax.tick_params(axis="both", which="major", labelsize=9)
+
+    # Equal aspect with some padding
+    ax.set_aspect("equal", adjustable="datalim")
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.savefig(output_path, dpi=300, facecolor="white", edgecolor="none")
     plt.close()
 
-    print(f"Saved: {output_path}")
-    print(f"  Correlation: r = {r:.3f}, p = {p_value:.2e}")
-    print(f"  N points: {len(merged)}")
+    return {"r": r, "p": p_value, "n": len(merged), "type": correlation_type}
 
 
 def main():
-    print("Loading Teloscope data...")
+    print("=" * 60)
+    print("Teloscope vs Telogator2 Comparison")
+    print("=" * 60)
+
+    # Load data
+    print("\nLoading Teloscope data...")
     teloscope_df = load_teloscope_data(TELOSCOPE_HAP1, TELOSCOPE_HAP2)
     print(f"  Loaded {len(teloscope_df)} telomere entries")
 
@@ -194,43 +241,69 @@ def main():
     telogator_ont_df = load_telogator2_data(TELOGATOR2_ONT)
     print(f"  Loaded {len(telogator_ont_df)} chromosome arm entries")
 
-    # Plot 1A: Teloscope vs Telogator2 HiFi TL_p75
-    print("\nCreating Plot 1A: Teloscope vs Telogator2 HiFi TL_p75...")
-    create_scatter_plot(
-        teloscope_df, telogator_hifi_df, "TL_p75",
-        "Teloscope vs Telogator2 HiFi (TL_p75)",
-        OUTPUT_DIR / "1A_teloscope_vs_telogator2_hifi_TL_p75.png",
-        "Telogator2 HiFi TL_p75 (bp)"
-    )
+    # Define plot configurations
+    # 3 percentiles x 2 metrics x 2 correlations = 12 plots
+    percentiles = [
+        ("TL_p75", "TL_p75_plus_tvr", "p75"),
+        ("TL_p90", "TL_p90_plus_tvr", "p90"),
+        ("TL_max", "TL_max_plus_tvr", "max"),
+    ]
+    correlations = ["pearson", "spearman"]
 
-    # Plot 1B: Teloscope vs Telogator2 HiFi TL_p75 + tvr_len
-    print("\nCreating Plot 1B: Teloscope vs Telogator2 HiFi TL_p75 + tvr_len...")
-    create_scatter_plot(
-        teloscope_df, telogator_hifi_df, "TL_p75_plus_tvr",
-        "Teloscope vs Telogator2 HiFi (TL_p75 + TVR)",
-        OUTPUT_DIR / "1B_teloscope_vs_telogator2_hifi_TL_p75_plus_tvr.png",
-        "Telogator2 HiFi TL_p75 + TVR (bp)"
-    )
+    # Collect all results for summary
+    results = []
 
-    # Plot 2A: Teloscope vs Telogator2 ONT TL_p75
-    print("\nCreating Plot 2A: Teloscope vs Telogator2 ONT TL_p75...")
-    create_scatter_plot(
-        teloscope_df, telogator_ont_df, "TL_p75",
-        "Teloscope vs Telogator2 ONT (TL_p75)",
-        OUTPUT_DIR / "2A_teloscope_vs_telogator2_ont_TL_p75.png",
-        "Telogator2 ONT TL_p75 (bp)"
-    )
+    print("\n" + "=" * 60)
+    print("Generating plots...")
+    print("=" * 60)
 
-    # Plot 2B: Teloscope vs Telogator2 ONT TL_p75 + tvr_len
-    print("\nCreating Plot 2B: Teloscope vs Telogator2 ONT TL_p75 + tvr_len...")
-    create_scatter_plot(
-        teloscope_df, telogator_ont_df, "TL_p75_plus_tvr",
-        "Teloscope vs Telogator2 ONT (TL_p75 + TVR)",
-        OUTPUT_DIR / "2B_teloscope_vs_telogator2_ont_TL_p75_plus_tvr.png",
-        "Telogator2 ONT TL_p75 + TVR (bp)"
-    )
+    datasets = [
+        ("hifi", "HiFi", telogator_hifi_df),
+        ("ont", "ONT", telogator_ont_df),
+    ]
 
+    for dataset_prefix, dataset_label, telogator_df in datasets:
+        for tl_col, tl_tvr_col, percentile_name in percentiles:
+            for corr_type in correlations:
+                corr_suffix = "pearson" if corr_type == "pearson" else "spearman"
+
+                # TL only
+                output_name = f"{dataset_prefix}_{percentile_name}_TL_{corr_suffix}.png"
+                y_label = f"Telogator2 {dataset_label} {percentile_name.upper()} (bp)"
+                result = create_scatter_plot(
+                    teloscope_df, telogator_df, tl_col,
+                    OUTPUT_DIR / output_name, y_label, corr_type
+                )
+                if result:
+                    result["metric"] = f"TL_{percentile_name}"
+                    result["dataset"] = dataset_label
+                    results.append(result)
+
+                # TL + TVR
+                output_name = f"{dataset_prefix}_{percentile_name}_TL+TVR_{corr_suffix}.png"
+                y_label = f"Telogator2 {dataset_label} {percentile_name.upper()}+TVR (bp)"
+                result = create_scatter_plot(
+                    teloscope_df, telogator_df, tl_tvr_col,
+                    OUTPUT_DIR / output_name, y_label, corr_type
+                )
+                if result:
+                    result["metric"] = f"TL+TVR_{percentile_name}"
+                    result["dataset"] = dataset_label
+                    results.append(result)
+
+    # Print summary statistics
+    print("\n" + "=" * 70)
+    print("CORRELATION SUMMARY")
+    print("=" * 70)
+    print(f"{'Dataset':<8} {'Metric':<16} {'Type':<10} {'r/ρ':>8} {'p-value':>12} {'n':>5}")
+    print("-" * 70)
+
+    for res in results:
+        print(f"{res['dataset']:<8} {res['metric']:<16} {res['type']:<10} {res['r']:>8.3f} {res['p']:>12.2e} {res['n']:>5}")
+
+    print("-" * 70)
     print(f"\nAll plots saved to: {OUTPUT_DIR}")
+    print(f"Total plots generated: {len(results)}")
 
 
 if __name__ == "__main__":
