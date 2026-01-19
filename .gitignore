@@ -20,6 +20,15 @@ __pycache__/
 *.tmp
 *.swp
 
+# Workflow dirs
+.snakemake/
+.nextflow/
+.slurm/
+
+
+# Heavy folders
+2_data/2.1_raw
+
 # Big genomics files
 *.bam
 *.bam.bai
@@ -40,14 +49,15 @@ __pycache__/
 *.bed
 *.bed.gz
 
-# Bid/numerous output files
+# Telomere annotation
 *_canonical_matches.bed
 *_noncanonical_matches.bed
 *_window_metrics.bedgraph
 *.path.report
 *.ls
 
-# Workflow dirs
-.snakemake/
-.nextflow/
-.slurm/
+# Hi-C annotation
+*.bwt
+*.pairs.gz
+*.pairs.sorted.gz
+*.pairs.sorted.dedup.gz
