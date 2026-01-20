@@ -2,7 +2,7 @@
 #SBATCH --job-name=3d_proc_annotation
 #SBATCH --output=%x_%j_%a_%A.out
 #SBATCH --error=%x_%j_%a_%A.err
-#SBATCH --partition=vgl_a
+#SBATCH --partition=vgl_c
 #SBATCH --account=jarv_condo_bank
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -78,11 +78,9 @@ done
 #done
 
 # Thread allocation
-THREADS_TOTAL="${SLURM_CPUS_PER_TASK:-32}"
-THREADS_MAP=$(( THREADS_TOTAL / 2 ))
-[[ "${THREADS_MAP}" -ge 1 ]] || THREADS_MAP=1
-THREADS_SORT=$(( THREADS_MAP / 2 ))
-[[ "${THREADS_SORT}" -ge 1 ]] || THREADS_SORT=1
+THREADS_TOTAL=32
+THREADS_MAP=32
+THREADS_SORT=32
 
 echo "[INFO] Host: $(hostname)"
 echo "[INFO] Job: ${SLURM_JOB_ID:-NA}"
@@ -156,7 +154,8 @@ if run_step 4; then
   if should_skip "${CHROM_SIZES}"; then
     echo "Step 4: chrom.sizes exists, skipping!"
   else
-    gfastats ${ASM_FASTA} --path-report | tail -n +2 | cut -f1,4 > ${CHROM_SIZES}
+    samtools faidx "${ASM_FASTA}"
+    cut -f1,2 "${ASM_FASTA}.fai" > "${CHROM_SIZES}"
     echo "Step 4: chrom.sizes done!"
   fi
 fi
@@ -168,7 +167,7 @@ if run_step 5; then
   if should_skip "${NAMESORTED_BAM}"; then
     echo "Step 5: namesorted BAM exists, skipping!"
   else
-    samtools sort -n -@ $SLURM_CPUS_PER_TASK ${SORTED_BAM} -o ${NAMESORTED_BAM}
+    samtools sort -n -@ "${THREADS_SORT}" ${SORTED_BAM} -o ${NAMESORTED_BAM}
     echo "Step 5: namesort done!"
   fi
 fi
