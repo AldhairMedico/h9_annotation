@@ -193,10 +193,10 @@ yticklabels_cells = [DISPLAY_LABELS.get(acc, acc) for acc in cell_line_order]
 # ──────────────────────────────────────────────────────────────────────────────
 # Color map (A uses Found + Missing; C uses full palette; "Missing" = #F0F0F0)
 colors = {
-    'Found':                   '#4DCCBD',
+    'Found':                   '#BDA7CA',  # Blue - contrasts with green completeness palette
     'Missing':                 '#F0F0F0',
 
-    't2t':                     '#1A9641',
+    't2t':                     '#3C995B',
     'gapped_t2t':              '#9CCF60',
     'incomplete':              '#FFC754',
     'gapped_incomplete':       '#FFE885',
@@ -215,7 +215,7 @@ def bottom_legend(ax, handles, title=None, ncol=None):
     if ncol is None:
         ncol = (len(handles) + 1) // 2  # 2 rows
     ax.legend(handles=handles, title=title, frameon=False,
-              loc='upper center', bbox_to_anchor=(0.5, -0.5),  # LAYOUT: Y = legend below x-axis label
+              loc='upper center', bbox_to_anchor=(0.5, -0.6),  # LAYOUT: Y = legend below x-axis label
               ncol=ncol, borderaxespad=0.)
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -266,10 +266,11 @@ height_ratios = [n_human, n_cells]  # LAYOUT: proportional heights (7:4 for huma
 #   - hspace: vertical gap between top and bottom rows (fraction of avg subplot height)
 #   - wspace: horizontal gap between left and right columns
 #   - bottom: space reserved at bottom for x-labels and legend (fraction of figure)
+#   - width_ratios=[L, R]: relative widths of left vs right columns (e.g., [1, 2] = right is 2x wider)
 # ──────────────────────────────────────────────────────────────────────────────
-abs_fig = plt.figure(figsize=(8, 4))  # LAYOUT: (width, height) in inches
+abs_fig = plt.figure(figsize=(6, 4))  # LAYOUT: (width, height) in inches
 abs_fig.subplots_adjust(bottom=0.25, hspace=0.10)  # LAYOUT: bottom=space for legend, hspace=gap between rows
-abs_gs = gridspec.GridSpec(2, 2, wspace=0.12, width_ratios=[1, 1], height_ratios=height_ratios)  # LAYOUT: wspace=gap between columns
+abs_gs = gridspec.GridSpec(2, 2, wspace=0.20, width_ratios=[1, 1.2], height_ratios=height_ratios)  # LAYOUT: width_ratios=[1,1.5], wspace=0.20
 
 # Top row: human assemblies
 axA_top = plt.subplot(abs_gs[0, 0])
@@ -313,7 +314,7 @@ annotate_bars_with_values(axA_bot, abs_vals_A_cells)
 bottom_legend(axA_bot, [
     Patch(facecolor=colors['Found'],   label='Found'),
     Patch(facecolor=colors['Missing'], label='Missing'),
-], ncol=2)
+], ncol=1)  # LAYOUT: ncol=1 for 2 rows, 1 column
 
 # --- Panel C: Chrs by telomere completeness ---
 # Top (human assemblies)
@@ -394,10 +395,11 @@ dataC_all_pct = pd.concat([dataC_human_pct, dataC_cells_pct])
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LAYOUT PARAMETERS (same as MODE 1):
+#   - width_ratios=[1, 1.2]: left panel is 2/5, right panel is 3/5 of total width
 # ──────────────────────────────────────────────────────────────────────────────
-pct_fig = plt.figure(figsize=(8, 4))  # LAYOUT: (width, height) in inches
+pct_fig = plt.figure(figsize=(6, 4))  # LAYOUT: (width, height) in inches
 pct_fig.subplots_adjust(bottom=0.25, hspace=0.10)  # LAYOUT: bottom=space for legend, hspace=gap between rows
-pct_gs = gridspec.GridSpec(2, 2, wspace=0.12, width_ratios=[1, 1], height_ratios=height_ratios)  # LAYOUT: wspace=gap between columns
+pct_gs = gridspec.GridSpec(2, 2, wspace=0.20, width_ratios=[1, 1.2], height_ratios=height_ratios)  # LAYOUT: width_ratios=[1,1.5], wspace=0.20
 
 # Top row: human assemblies
 axA_top_pct = plt.subplot(pct_gs[0, 0])
@@ -430,7 +432,7 @@ dataA_cells_pct.plot.barh(stacked=True, ax=axA_bot_pct,
                           width=0.7, edgecolor='white', linewidth=0.5, legend=False)
 axA_bot_pct.set_yticklabels(yticklabels_cells)
 axA_bot_pct.set_ylabel('')
-axA_bot_pct.set_xlabel('Total telomeres %')
+axA_bot_pct.set_xlabel('Total telomeres (%)')
 axA_bot_pct.invert_yaxis()
 abs_vals_A_cells_pct = list(tt_cells_pct.values) + list(miss_cells_pct.values)
 annotate_bars_with_values(axA_bot_pct, abs_vals_A_cells_pct)
@@ -439,7 +441,7 @@ annotate_bars_with_values(axA_bot_pct, abs_vals_A_cells_pct)
 bottom_legend(axA_bot_pct, [
     Patch(facecolor=colors['Found'],   label='Found'),
     Patch(facecolor=colors['Missing'], label='Missing'),
-], ncol=2)
+], ncol=1)  # LAYOUT: ncol=1 for 2 rows, 1 column
 
 # --- Panel C: Chrs by telomere completeness (percent) ---
 # Top (human assemblies)
@@ -464,7 +466,7 @@ dataC_cells_pct.plot.barh(stacked=True, ax=axC_bot_pct,
                           width=0.7, edgecolor='white', linewidth=0.5, legend=False)
 axC_bot_pct.set_yticklabels([])
 axC_bot_pct.set_ylabel('')
-axC_bot_pct.set_xlabel('Assembled chromosomes %')
+axC_bot_pct.set_xlabel('Assembled chromosomes (%)')
 axC_bot_pct.invert_yaxis()
 # Annotate with absolute counts for cell lines
 abs_vals_C_cells = []

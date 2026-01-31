@@ -14,10 +14,6 @@ This script:
      pairwise tests (U test) with BH & Bonferroni p-adj.
      Fig 2B: Pairwise matrix — upper triangle shows Δ(mean Kbp) as text; lower triangle
      shows -log10(p-adj Bonf.) heatmap.
-  3) Fig 3: Telomere length (Kbp) vs canonical proportion (%) scatter
-     (square, y-axis starts at min(canonical)-1, legend inside).
-  4) Fig 4: H9-only (hap1 & hap2) scatter of telomere length vs canonical proportion
-     with chromosome name labels highlighted.
 
 All PNG saved at 600 dpi; PNG + PDF go to ./figures.
 """
@@ -32,7 +28,6 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 
 # stats
 try:
@@ -54,8 +49,6 @@ OUT_DIR = os.path.join(WD, "figures")
 FIG1_BASENAME  = "scatter_H9_hap1_vs_hap2_v5"
 FIG2A_BASENAME = "raincloud_by_assembly_v5"
 FIG2B_BASENAME = "pairwise_heatmap_v5"
-FIG3A_BASENAME = "scatter_by_assembly_v5"
-FIG4_BASENAME  = "scatter_H9_length_vs_canonical_v5"
 
 PAIRWISE_PVALS_TSV = "telomere_length_pairwise_pvalues.tsv"  # written into OUT_DIR
 
@@ -538,121 +531,6 @@ def make_plot_pairwise_heatmap(df: pd.DataFrame, assemblies: List[str], out_dir:
     plt.close(fig)
 
 # --------------------------------------------------------------------------
-# FIG 3A: scatter (square, y>=min-1)   |   FIG 3B/4: single robust contours
-# --------------------------------------------------------------------------
-
-def legend_inside_br(ax, labels_colors):
-    handles = [Line2D([0],[0], marker='o', linestyle='None', color=c, markerfacecolor=c,
-                      markeredgecolor='black', markeredgewidth=0.4, label=lab)
-               for lab, c in labels_colors]
-    ax.legend(handles=handles, frameon=True, fontsize=7, loc="lower right")
-
-def make_plot_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, basename: str) -> None:
-    present = []
-    for a in ASSEMBLY_ORDER:
-        if a in set(df["assembly_label"].unique()):
-            present.append(a)
-    for a in df["assembly_label"].unique():
-        if a not in present:
-            present.append(a)
-    if not present:
-        return
-
-    fig, ax = plt.subplots(figsize=(5.0, 5.0), dpi=600)  # square
-    labels_colors = []
-    for asm in present:
-        sub = df[df["assembly_label"] == asm]
-        if sub.empty:
-            continue
-        col = PALETTE.get(asm, "#BBBBBB")
-        labels_colors.append((asm, col))
-        ax.scatter(sub["tel_length_kbp"], sub["canonical_pct"], s=16, alpha=0.85,
-                   edgecolor="black", linewidth=0.2, c=col)
-
-    ax.set_xlabel("Telomere length (Kbp)")
-    ax.set_ylabel("Canonical proportion (%)")
-    y_min_scatter = float(np.nanmin(df["canonical_pct"])) - 1.0
-    ax.set_ylim(y_min_scatter, 100)
-
-    # === SCALE TOGGLE === set both to 'linear' or 'log' as needed
-    # ax.set_xscale('linear'); ax.set_yscale('linear')
-    # ax.set_xscale('log');    ax.set_yscale('log')
-
-    ax.grid(True, which="major", axis="both", linewidth=0.6, alpha=0.35, color="lightgrey")
-    legend_inside_br(ax, labels_colors)
-
-    for spine in ax.spines.values():
-        spine.set_linewidth(1.0)
-    ax.tick_params(axis="both", which="both", length=3, width=1.0, direction="out")
-
-    plt.tight_layout()
-    ensure_dir(out_dir)
-    fig.savefig(os.path.join(out_dir, f"{basename}.png"), dpi=600)
-    fig.savefig(os.path.join(out_dir, f"{basename}.pdf"))
-    plt.close(fig)
-
-# --------------------------------------------------------------------------
-# FIG 4: H9-only scatter with chromosome labels (length vs canonical %)
-# --------------------------------------------------------------------------
-
-def make_plot_h9_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, basename: str) -> None:
-    """
-    Scatter plot of telomere length (Kbp) vs canonical proportion (%)
-    for H9 hap1 and hap2 only, with chromosome name labels on each point.
-    """
-    sub = df[df["assembly_label"].isin(["H9 hap1", "H9 hap2"])].copy()
-    if sub.empty:
-        print("[WARN] No H9 data; skipping H9 length vs canonical scatter.")
-        return
-
-    # Extract chromosome name from header (e.g., "chr1_hap1" -> "chr1")
-    def get_chrom(h: str) -> str:
-        for tag in ["_hap1", "_hap2"]:
-            if h.endswith(tag):
-                return h[:-len(tag)]
-        return h
-    sub["chrom"] = sub["header"].astype(str).map(get_chrom)
-    # Extract arm (p or q)
-    sub["arm"] = sub["label"].astype(str).str.replace(r"[^pq]", "", regex=True).str[:1]
-    # Create label like "1p" or "Xq"
-    sub["chr_label"] = sub["chrom"].str.replace("chr", "") + sub["arm"]
-
-    fig, ax = plt.subplots(figsize=(5.5, 5.5), dpi=600)
-
-    labels_colors = []
-    for asm in ["H9 hap1", "H9 hap2"]:
-        asm_sub = sub[sub["assembly_label"] == asm]
-        if asm_sub.empty:
-            continue
-        col = PALETTE.get(asm, "#BBBBBB")
-        labels_colors.append((asm, col))
-        ax.scatter(asm_sub["tel_length_kbp"], asm_sub["canonical_pct"], s=25, alpha=0.8,
-                   edgecolor="black", linewidth=0.4, c=col, zorder=3)
-        # Add chromosome labels
-        for _, row in asm_sub.iterrows():
-            ax.text(row["tel_length_kbp"] + 0.15, row["canonical_pct"] + 0.15,
-                    row["chr_label"], fontsize=5, va="bottom", ha="left", color=col, zorder=4)
-
-    ax.set_xlabel("Telomere length (Kbp)")
-    ax.set_ylabel("Canonical proportion (%)")
-    ax.set_xlim(0, 25)
-    y_min_scatter = min(102, float(np.nanmin(sub["canonical_pct"])) - 1.0)
-    ax.set_ylim(y_min_scatter, 102)
-    ax.grid(True, which="major", axis="both", linewidth=0.6, alpha=0.35, color="lightgrey")
-
-    legend_inside_br(ax, labels_colors)
-
-    for spine in ax.spines.values():
-        spine.set_linewidth(1.0)
-    ax.tick_params(axis="both", which="both", length=3, width=1.0, direction="out")
-
-    plt.tight_layout()
-    ensure_dir(out_dir)
-    fig.savefig(os.path.join(out_dir, f"{basename}.png"), dpi=600)
-    fig.savefig(os.path.join(out_dir, f"{basename}.pdf"))
-    plt.close(fig)
-
-# --------------------------------------------------------------------------
 # MAIN
 # --------------------------------------------------------------------------
 
@@ -665,14 +543,9 @@ def main() -> None:
 
     # Fig 2A: rainclouds per assembly + Bonferroni bars limited to H9 pairs
     plotted = make_plot_assemblies_raincloud(df, OUT_DIR, FIG2A_BASENAME)
+    
     # Fig 2B: pairwise matrix (using the same plotted assemblies)
     make_plot_pairwise_heatmap(df, plotted, OUT_DIR, FIG2B_BASENAME)
-
-    # Fig 3: scatter (square), y>=min-1
-    make_plot_length_vs_canonical_scatter(df, OUT_DIR, FIG3A_BASENAME)
-
-    # Fig 4: H9-only scatter with chr labels (length vs canonical %)
-    make_plot_h9_length_vs_canonical_scatter(df, OUT_DIR, FIG4_BASENAME)
 
 if __name__ == "__main__":
     main()
