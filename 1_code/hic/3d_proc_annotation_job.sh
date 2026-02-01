@@ -15,8 +15,8 @@ set -euo pipefail
 # Activate environment with pairtools and cooltools installed
 # conda activate cooltools_env
 
-# Working directory (resolved relative to script location)
-WD=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+# Working directory: SLURM_SUBMIT_DIR on HPC, script-relative locally
+WD=$(cd "${SLURM_SUBMIT_DIR:-$(dirname "${BASH_SOURCE[0]}")}/../.." && pwd)
 cd "$WD"
 
 # Which steps to run (1-3: preprocessing, 4-15: downstream). Separated by spaces.
