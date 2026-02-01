@@ -2,7 +2,7 @@
 #SBATCH --job-name=3d_proc_annotation
 #SBATCH --output=%x_%j_%a_%A.out
 #SBATCH --error=%x_%j_%a_%A.err
-#SBATCH --partition=vgl_c
+#SBATCH --partition=vgl_a
 #SBATCH --account=jarv_condo_bank
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,7 +20,7 @@ WD=$(cd "${SLURM_SUBMIT_DIR:-$(dirname "${BASH_SOURCE[0]}")}/../.." && pwd)
 cd "$WD"
 
 # Which steps to run (1-3: preprocessing, 4-15: downstream). Separated by spaces.
-STEPS=(9 10 11 12a 12b 12c 13 14 15)
+STEPS=(4 5 6 7 8 9 10 11 12a 12b 12c 13 14 15)
 RESOLUTIONS=(5000 10000 20000 50000 100000 200000)
 
 # Force overwrite existing files (set to true to rerun steps even if output exists)
@@ -45,7 +45,7 @@ function should_skip() {
 }
 
 # Prefix and params (HAP: hap1, hap2, or dip)
-HAP="hap2"
+HAP="dip"
 ASM="H9_T2T_v0.1_${HAP}"
 ALIGNER="bwa"
 PREFIX="${ASM}.${ALIGNER}"
