@@ -15,13 +15,13 @@ set -euo pipefail
 # Activate environment with pairtools and cooltools installed
 # conda activate cooltools_env
 
-# Working directory
-WD=/lustre/fs5/vgl/scratch/amedico/h9_annotation
-cd $WD
+# Working directory (resolved relative to script location)
+WD=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+cd "$WD"
 
 # Which steps to run (1-3: preprocessing, 4-15: downstream). Separated by spaces.
-STEPS=(4 6 7 8 9 10 11 12a 12b 12c 13 14 15)
-RESOLUTIONS=(20000 50000 100000)
+STEPS=(9 10 11 12a 12b 12c 13 14 15)
+RESOLUTIONS=(5000 10000 20000 50000 100000 200000)
 
 # Force overwrite existing files (set to true to rerun steps even if output exists)
 FORCE_OVERWRITE=true
@@ -50,7 +50,18 @@ ASM="H9_T2T_v0.1_${HAP}"
 ALIGNER="bwa"
 PREFIX="${ASM}.${ALIGNER}"
 WALKS_POLICY="mask"
-BIN_SIZE=10000  # For cload
+BIN_SIZE=5000  # For cload (must be <= finest RESOLUTIONS entry)
+
+# Derive comma-separated resolution list for cooler zoomify (single source of truth)
+ZOOMIFY_RES_CSV=$(IFS=,; echo "${RESOLUTIONS[*]}")
+
+# Validate: every RESOLUTIONS entry must be >= BIN_SIZE (zoomify can't go finer than input)
+for _r in "${RESOLUTIONS[@]}"; do
+  (( _r >= BIN_SIZE )) || {
+    echo "ERROR: resolution ${_r} < BIN_SIZE ${BIN_SIZE}; cload base is too coarse" >&2
+    exit 1
+  }
+done
 
 # Paths
 RAW_DIR="${WD}/2_data/2.1_raw"
@@ -261,7 +272,7 @@ if run_step 11; then
     cooler zoomify \
       --nproc $SLURM_CPUS_PER_TASK \
       --out ${MCOOL_FILE} \
-      --resolutions 10000,20000,50000,100000,200000 \
+      --resolutions ${ZOOMIFY_RES_CSV} \
       --balance \
       ${PROC_DIR}/${PREFIX}.${BIN_SIZE}.pairs.sorted.dedup.cool
     echo "Step 11: zoomify done!"
@@ -362,7 +373,7 @@ if run_step 15; then
       --fig png \
       --qrange 0.02 0.98 \
       ${PROC_DIR}/${PREFIX}.${BIN_SIZE}.pairs.sorted.dedup.cool \
-      ${PROC_DIR}/${PREFIX}.${BIN_SIZE}.pairs.sorted.dedup.cool.compartments.cis.vecs.tsv::E1 \
+      ${PROC_DIR}/${PREFIX}.${RESOLUTIONS[0]}.pairs.sorted.dedup.cool.compartments.cis.vecs.tsv::E1 \
       ${PROC_DIR}/${PREFIX}.${BIN_SIZE}.pairs.sorted.dedup.cool.expected_cis.tsv::balanced.avg
     echo "Step 15: saddle done!"
   fi
