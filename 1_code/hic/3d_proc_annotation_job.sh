@@ -313,19 +313,25 @@ if run_step 12b; then
   done
 fi
 
-# 12c) Eigendecompose + phase to GC content
+# 12c) Eigendecompose + phase (coding_cov or gc)
 if run_step 12c; then
   for RES in "${RESOLUTIONS[@]}"; do
-    COMPARTMENTS_PREFIX="${PROC_DIR}/${PREFIX}.${RES}.pairs.sorted.dedup.cool.compartments"
+    # Prefer coding_cov; fall back to gc so the pipeline never fails
+    PHASE_TRACK="coding_cov"
+    if [[ ! -s "${PROC_DIR}/${PREFIX}.${RES}.${PHASE_TRACK}.bedgraph" ]]; then
+      PHASE_TRACK="gc"
+      echo "[WARN] Step 12c: coding_cov bedgraph not found for ${RES} bp, falling back to gc"
+    fi
+    COMPARTMENTS_PREFIX="${PROC_DIR}/${PREFIX}.${RES}.mcool.compartments"
     if should_skip "${COMPARTMENTS_PREFIX}.cis.vecs.tsv"; then
       echo "Step 12c: ${RES} bp compartments exists, skipping!"
     else
       cooltools eigs-cis \
         --out-prefix ${COMPARTMENTS_PREFIX} \
         --bigwig \
-        --phasing-track ${PROC_DIR}/${PREFIX}.${RES}.gc.bedgraph \
+        --phasing-track ${PROC_DIR}/${PREFIX}.${RES}.${PHASE_TRACK}.bedgraph \
         ${PROC_DIR}/${PREFIX}.${BIN_SIZE}.mcool::resolutions/${RES}
-      echo "Step 12c: eigs-cis ${RES} bp (gc) done!"
+      echo "Step 12c: eigs-cis ${RES} bp (${PHASE_TRACK}) done!"
     fi
   done
 fi

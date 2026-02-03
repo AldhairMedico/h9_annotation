@@ -1,0 +1,4 @@
+Sample	FF	RF	FR	RR
+H9_T2T_v0.1_dip.bwa.pairs	272.0	975.0	13986.0	639.0
+H9_T2T_v0.1_hap1.bwa.pairs	28117.0	40860.0	181400.0	27817.0
+H9_T2T_v0.1_hap2.bwa.pairs	28090.0	40845.0	181329.0	28189.0

@@ -1,0 +1,4 @@
+Module	Section	Sample Name	Source
+pairtools	all_sections	H9_T2T_v0.1_dip.bwa.pairs.parse	/mnt/d/research/h9_annotation/2_data/2.2_processed/H9_T2T_v0.1_dip.bwa.pairs.parse.stats.txt
+pairtools	all_sections	H9_T2T_v0.1_hap1.bwa.pairs.parse	/mnt/d/research/h9_annotation/2_data/2.2_processed/H9_T2T_v0.1_hap1.bwa.pairs.parse.stats.txt
+pairtools	all_sections	H9_T2T_v0.1_hap2.bwa.pairs.parse	/mnt/d/research/h9_annotation/2_data/2.2_processed/H9_T2T_v0.1_hap2.bwa.pairs.parse.stats.txt

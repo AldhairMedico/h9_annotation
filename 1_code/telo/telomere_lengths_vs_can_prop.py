@@ -25,6 +25,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from scipy import stats
+from adjustText import adjust_text
 
 # --------------------------------------------------------------------------
 # CONFIG
@@ -34,7 +36,7 @@ from matplotlib.lines import Line2D
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
-INPUT_BED = os.path.join(REPO_ROOT, "2_data", "2.2_processed", "25.12.10_asms_x1_TTAGGG_v1.3.terminal_telomeres.bed")
+INPUT_BED = os.path.join(REPO_ROOT, "2_data", "2.2_processed", "25.12.10_teloscope_compiled", "25.12.10_asms_x1_TTAGGG_v1.3.terminal_telomeres.bed")
 
 # Output dir
 OUT_DIR = os.path.join(REPO_ROOT, "3_figures", "3.1_draft", "26.01.29_telomeres")
@@ -211,16 +213,22 @@ def make_plot_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, basena
     ensure_dir(out_dir)
     fig.savefig(os.path.join(out_dir, f"{basename}.png"), dpi=600)
     fig.savefig(os.path.join(out_dir, f"{basename}.pdf"))
+    fig.savefig(os.path.join(out_dir, f"{basename}.svg"))
     plt.close(fig)
 
 # --------------------------------------------------------------------------
 # FIG 2: H9-only scatter with chromosome labels (length vs canonical %)
 # --------------------------------------------------------------------------
 
+# Exclusion lists for trimmed/removed telomeres (not included in regression)
+EXCLUDE_HAP1 = {"21p", "15p", "12p", "12q", "16p"}
+EXCLUDE_HAP2 = {"13p", "15q", "2q", "21p"}
+
 def make_plot_h9_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, basename: str) -> None:
     """
     Scatter plot of telomere length (Kbp) vs canonical proportion (%)
     for H9 hap1 and hap2 only, with chromosome name labels on each point.
+    Excluded telomeres are shown as hollow points and not included in regression.
     """
     sub = df[df["assembly_label"].isin(["H9 hap1", "H9 hap2"])].copy()
     if sub.empty:
@@ -239,8 +247,18 @@ def make_plot_h9_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, bas
     # Create label like "1p" or "Xq"
     sub["chr_label"] = sub["chrom"].str.replace("chr", "") + sub["arm"]
 
-    fig, ax = plt.subplots(figsize=(5.5, 5.5), dpi=600)
+    # Determine which points are excluded based on haplotype
+    def is_excluded(row) -> bool:
+        if row["assembly_label"] == "H9 hap1":
+            return row["chr_label"] in EXCLUDE_HAP1
+        elif row["assembly_label"] == "H9 hap2":
+            return row["chr_label"] in EXCLUDE_HAP2
+        return False
+    sub["excluded"] = sub.apply(is_excluded, axis=1)
 
+    fig, ax = plt.subplots(figsize=(5, 5), dpi=600)
+
+    texts = []  # For adjustText
     labels_colors = []
     for asm in ["H9 hap1", "H9 hap2"]:
         asm_sub = sub[sub["assembly_label"] == asm]
@@ -248,30 +266,67 @@ def make_plot_h9_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, bas
             continue
         col = PALETTE.get(asm, "#BBBBBB")
         labels_colors.append((asm, col))
-        ax.scatter(asm_sub["tel_length_kbp"], asm_sub["canonical_pct"], s=25, alpha=0.8,
-                   edgecolor="black", linewidth=0.4, c=col, zorder=3)
-        # Add chromosome labels
-        for _, row in asm_sub.iterrows():
-            ax.text(row["tel_length_kbp"] + 0.15, row["canonical_pct"] + 0.15,
-                    row["chr_label"], fontsize=5, va="bottom", ha="left", color=col, zorder=4)
 
-    ax.set_xlabel("Telomere length (Kbp)")
-    ax.set_ylabel("Canonical proportion (%)")
-    ax.set_xlim(0, 25)
+        # Included points (filled)
+        included = asm_sub[~asm_sub["excluded"]]
+        if not included.empty:
+            ax.scatter(included["tel_length_kbp"], included["canonical_pct"], s=30, alpha=0.85,
+                       edgecolor="black", linewidth=0.5, c=col, zorder=3)
+
+        # Excluded points (hollow with grey border)
+        excluded = asm_sub[asm_sub["excluded"]]
+        if not excluded.empty:
+            ax.scatter(excluded["tel_length_kbp"], excluded["canonical_pct"], s=30, alpha=0.85,
+                       edgecolor="grey", linewidth=0.5, facecolors="none", zorder=2)
+
+        # Add chromosome labels for all points
+        for _, row in asm_sub.iterrows():
+            txt = ax.text(row["tel_length_kbp"], row["canonical_pct"],
+                          row["chr_label"], fontsize=7, va="center", ha="center",
+                          color=col if not row["excluded"] else "grey", zorder=4)
+            texts.append(txt)
+
+    # Adjust text positions to avoid overlapping
+    adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle="-", color="grey", lw=0.3),
+                expand_points=(1.8, 1.8), force_text=(0.6, 0.6))
+
+    # Regression on included points only
+    included_all = sub[~sub["excluded"]].dropna(subset=["tel_length_kbp", "canonical_pct"])
+    if len(included_all) >= 3:
+        x_reg = included_all["tel_length_kbp"].values
+        y_reg = included_all["canonical_pct"].values
+        # Spearman correlation
+        rho, p_val = stats.spearmanr(x_reg, y_reg)
+        # Linear regression for the line
+        slope, intercept = np.polyfit(x_reg, y_reg, 1)
+        x_line = np.linspace(0, 25, 100)
+        y_line = slope * x_line + intercept
+        ax.plot(x_line, y_line, color="black", linestyle="--", linewidth=1.2, alpha=0.7, zorder=1)
+        # Display Spearman rho and p-value at the top
+        ax.text(0.05, 0.95, f"Spearman ρ = {rho:.3f}\np-adj = {p_val:.2e}",
+                transform=ax.transAxes, fontsize=8, va="top", ha="left",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="lightgrey", alpha=0.9))
+
+    ax.set_xlabel("Telomere length (Kbp)", fontsize=11)
+    ax.set_ylabel("Canonical proportion (%)", fontsize=11)
+    # ax.set_xscale("log")
+    ax.set_xlim(0, 23)
     y_min_scatter = min(102, float(np.nanmin(sub["canonical_pct"])) - 1.0)
     ax.set_ylim(y_min_scatter, 102)
+    ax.tick_params(axis="both", which="major", labelsize=10, length=4, width=1.0, direction="out")
+    ax.tick_params(axis="both", which="minor", labelsize=8, length=2, width=0.8, direction="out")
     ax.grid(True, which="major", axis="both", linewidth=0.6, alpha=0.35, color="lightgrey")
 
     legend_inside_br(ax, labels_colors)
 
     for spine in ax.spines.values():
         spine.set_linewidth(1.0)
-    ax.tick_params(axis="both", which="both", length=3, width=1.0, direction="out")
 
     plt.tight_layout()
     ensure_dir(out_dir)
     fig.savefig(os.path.join(out_dir, f"{basename}.png"), dpi=600)
     fig.savefig(os.path.join(out_dir, f"{basename}.pdf"))
+    fig.savefig(os.path.join(out_dir, f"{basename}.svg"))
     plt.close(fig)
 
 # --------------------------------------------------------------------------

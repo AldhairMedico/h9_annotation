@@ -1,0 +1,57 @@
+
++++ Path Summary Report +++
+pos	header	telomeres	labels	gaps	type	granular	its	canonical	windows
+1	GWHDOOG00000001	Chromosome	2	pq	0	t2t	PQ	34	89799	496686
+2	GWHDOOG00000002	Chromosome	2	pq	0	t2t	PQ	46	94062	485269
+3	GWHDOOG00000003	Chromosome	2	pq	0	t2t	PQ	18	76983	400609
+4	GWHDOOG00000004	Chromosome	2	pq	0	t2t	PQ	15	72239	383677
+5	GWHDOOG00000005	Chromosome	2	pq	0	t2t	PQ	18	70417	366716
+6	GWHDOOG00000006	Chromosome	2	pq	0	t2t	PQ	16	66106	343087
+7	GWHDOOG00000007	Chromosome	2	pq	0	t2t	PQ	27	60095	321641
+8	GWHDOOG00000008	Chromosome	2	pq	0	t2t	PQ	10	56194	290140
+9	GWHDOOG00000009	Chromosome	2	pq	0	t2t	PQ	23	47160	264695
+10	GWHDOOG00000010	Chromosome	2	pq	0	t2t	PQ	25	51567	270150
+11	GWHDOOG00000011	Chromosome	2	pq	0	t2t	PQ	23	52619	273427
+12	GWHDOOG00000012	Chromosome	2	pq	0	t2t	PQ	18	50902	268929
+13	GWHDOOG00000013	Chromosome	2	pq	0	t2t	PQ	19	38775	216494
+14	GWHDOOG00000014	Chromosome	2	pq	0	t2t	PQ	12	37052	206049
+15	GWHDOOG00000015	Chromosome	2	pq	0	t2t	PQ	14	34366	194371
+16	GWHDOOG00000016	Chromosome	2	pq	0	t2t	PQ	16	32152	176625
+17	GWHDOOG00000017	Chromosome	2	pq	0	t2t	PQ	16	29861	167298
+18	GWHDOOG00000018	Chromosome	2	pq	0	t2t	PQ	15	30370	159989
+19	GWHDOOG00000019	Chromosome	2	pq	0	t2t	PQ	11	20311	122979
+20	GWHDOOG00000020	Chromosome	2	pq	0	t2t	PQ	19	25035	132518
+21	GWHDOOG00000021	Chromosome	2	pq	0	t2t	PQ	13	16453	84793
+22	GWHDOOG00000022	Chromosome	2	pq	0	t2t	PQ	22	16262	101000
+23	GWHDOOG00000023	Chromosome	2	pq	0	t2t	PQ	87	16795	103047
+
++++ Assembly Summary Report +++
+Total paths:	23
+Total gaps:	0
+Total telomeres:	46
+Total ITS blocks:	517
+Total canonical matches:	1085575
+Total windows analyzed:	5830189
+
++++ Telomere Statistics +++
+Mean length:	5347.33
+Median length:	5088
+Min length:	2670
+Max length:	9390
+
++++ Chromosome Telomere Counts+++
+Two telomeres:	23
+One telomere:	0
+Zero telomeres:	0
+
++++ Chromosome Telomere/Gap Completeness+++
+T2T:	23
+Gapped T2T:	0
+Missassembled:	0
+Gapped missassembled:	0
+Incomplete:	0
+Gapped incomplete:	0
+No telomeres:	0
+Gapped no telomeres:	0
+Discordant:	0
+Gapped discordant:	0
