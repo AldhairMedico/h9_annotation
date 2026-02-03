@@ -48,6 +48,8 @@ __pycache__/
 *.vcf.gz
 *.bed
 *.bed.gz
+*.gff3.gz
+
 
 # Telomere annotation
 *_canonical_matches.bed
@@ -63,3 +65,7 @@ __pycache__/
 *.pairs.sorted.dedup.gz
 *.pairs.sorted.dedup.cool
 *.mcool
+
+
+# Adobe files
+*.ai
