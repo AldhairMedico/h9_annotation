@@ -20,7 +20,7 @@ WD=$(cd "${SLURM_SUBMIT_DIR:-$(dirname "${BASH_SOURCE[0]}")}/../.." && pwd)
 cd "$WD"
 
 # Which steps to run (1-3: preprocessing, 4-15: downstream). Separated by spaces.
-STEPS=(2 3 4 5 6 7 8 9 10 11 12a 12b 12c 13 14 15)
+STEPS=(12c)
 RESOLUTIONS=(5000 10000 20000 50000 100000 200000)
 
 # Force overwrite existing files (set to true to rerun steps even if output exists)
