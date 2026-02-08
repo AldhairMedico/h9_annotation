@@ -8,6 +8,7 @@ import os
 import glob
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.stats import spearmanr, pearsonr
 
 
 # track name -> (bedgraph suffix, x-axis label, display scale factor)
@@ -23,7 +24,7 @@ def make_plots():
     REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
     processed_wd = os.path.join(REPO_ROOT, "2_data", "2.2_processed")
-    figures_wd = os.path.join(REPO_ROOT, "3_figures", "3.1_draft", "26.02.04_hic")
+    figures_wd = os.path.join(REPO_ROOT, "3_figures", "3.1_draft", "26.02.08_hic")
     os.makedirs(figures_wd, exist_ok=True)
 
     # find all cis.vecs.tsv files
@@ -50,8 +51,8 @@ def make_plots():
                 continue
 
             df_track = pd.read_csv(track_path, sep="\t")
-            # normalise the value column (4th) to the track name
-            value_col = df_track.columns[3]
+            # normalise the value column (5th, index 4) to the track name
+            value_col = df_track.columns[4]
             if value_col != track_name:
                 df_track.rename(columns={value_col: track_name}, inplace=True)
 
@@ -63,33 +64,90 @@ def make_plots():
                 how="inner",
             ).dropna(subset=["E1", track_name])
 
-            # per-chrom correlations and scatter plots
-            corrs = {}
+            # First pass: compute correlations and p-values for all chromosomes
+            chrom_stats = {}
+            chrom_data = {}
             for chrom, grp in df.groupby("chrom"):
-                r = grp["E1"].corr(grp[track_name])
-                corrs[chrom] = r
+                chrom_data[chrom] = grp
+                pearson_r, pearson_p = pearsonr(grp[track_name], grp["E1"])
+                spearman_rho, spearman_p = spearmanr(grp[track_name], grp["E1"])
+                chrom_stats[chrom] = {
+                    "pearson_r": pearson_r,
+                    "pearson_p": pearson_p,
+                    "spearman_rho": spearman_rho,
+                    "spearman_p": spearman_p,
+                }
 
-                fig, ax = plt.subplots(figsize=(3, 3))
+            chroms_sorted = sorted(chrom_stats.keys())
+
+            # Generate scatter plots with legends
+            for chrom in chroms_sorted:
+                grp = chrom_data[chrom]
+                stats = chrom_stats[chrom]
+
+                fig, ax = plt.subplots(figsize=(4, 4))
                 ax.scatter(grp[track_name] * scale, grp["E1"], s=5, alpha=0.5)
                 ax.axhline(0, color="gray", linewidth=1)
                 ax.set_xlabel(xlabel)
                 ax.set_ylabel("E1")
+
+                # Add legend with correlation statistics
+                stats_text = (
+                    f"ρ = {stats['spearman_rho']:.3f}, p = {stats['spearman_p']:.2e}\n"
+                    f"r = {stats['pearson_r']:.3f}, p = {stats['pearson_p']:.2e}"
+                )
+                ax.text(
+                    0.95, 0.95, stats_text,
+                    transform=ax.transAxes,
+                    fontsize=7,
+                    verticalalignment="top",
+                    horizontalalignment="right",
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgrey", alpha=0.9),
+                )
+
                 fig.tight_layout()
                 fig.savefig(os.path.join(out_dir, f"{chrom}_{track_name}.png"), dpi=600)
                 plt.close(fig)
 
-            # summary barplot of all correlations
-            chs = sorted(corrs)
-            vals = [corrs[c] for c in chs]
+            # Summary barplot: Spearman correlations
+            spearman_vals = [chrom_stats[c]["spearman_rho"] for c in chroms_sorted]
             fig, ax = plt.subplots(figsize=(8, 4))
-            ax.bar(chs, vals)
+            ax.bar(chroms_sorted, spearman_vals)
             ax.axhline(0, color="gray", linewidth=1)
-            ax.set_xticks(range(len(chs)))
-            ax.set_xticklabels(chs, rotation=90, fontsize=6)
+            ax.set_xticks(range(len(chroms_sorted)))
+            ax.set_xticklabels(chroms_sorted, rotation=90, fontsize=6)
+            ax.set_ylabel(f"Spearman ρ (E1 vs {track_name})")
+            fig.tight_layout()
+            fig.savefig(os.path.join(out_dir, f"{hap}_{res}_{track_name}_spearman_summary.png"), dpi=600)
+            plt.close(fig)
+
+            # Summary barplot: Pearson correlations
+            pearson_vals = [chrom_stats[c]["pearson_r"] for c in chroms_sorted]
+            fig, ax = plt.subplots(figsize=(8, 4))
+            ax.bar(chroms_sorted, pearson_vals)
+            ax.axhline(0, color="gray", linewidth=1)
+            ax.set_xticks(range(len(chroms_sorted)))
+            ax.set_xticklabels(chroms_sorted, rotation=90, fontsize=6)
             ax.set_ylabel(f"Pearson r (E1 vs {track_name})")
             fig.tight_layout()
-            fig.savefig(os.path.join(out_dir, f"{hap}_{res}_{track_name}_correlation_summary.png"), dpi=600)
+            fig.savefig(os.path.join(out_dir, f"{hap}_{res}_{track_name}_pearson_summary.png"), dpi=600)
             plt.close(fig)
+
+            # Export summary statistics to TSV
+            summary_rows = []
+            for chrom in chroms_sorted:
+                stats = chrom_stats[chrom]
+                summary_rows.append({
+                    "track": track_name,
+                    "chrom": chrom,
+                    "spearman_rho": stats["spearman_rho"],
+                    "spearman_p": stats["spearman_p"],
+                    "pearson_r": stats["pearson_r"],
+                    "pearson_p": stats["pearson_p"],
+                })
+            df_summary = pd.DataFrame(summary_rows)
+            summary_path = os.path.join(out_dir, f"{hap}_{res}_{track_name}_summary_stats.tsv")
+            df_summary.to_csv(summary_path, sep="\t", index=False)
 
 
 if __name__ == "__main__":

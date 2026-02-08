@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Session genome="D:\research\h9_annotation\2_data\2.1_raw\H9_T2T_v0.1_dip.fasta" locus="chrX_hap2:7507696-12507697" version="8">
+    <Resources>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.100000.AB.flipped.bedgraph" type="bedgraph"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.5000.AB.flipped.bw" type="bw"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.10000.AB.flipped.bed" type="bed"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.50000.AB.flipped.bed" type="bed"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\25.12.16_gene_annotations\H9_HAP2.genes.coding.bed" type="bed"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.200000.AB.flipped.bed" type="bed"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.5000.AB.flipped.bedgraph" type="bedgraph"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.10000.AB.flipped.bedgraph" type="bedgraph"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.100000.AB.flipped.bw" type="bw"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.20000.AB.flipped.bed" type="bed"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.5000.AB.flipped.bed" type="bed"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.200000.AB.flipped.bedgraph" type="bedgraph"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.20000.AB.flipped.bedgraph" type="bedgraph"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.100000.AB.flipped.bed" type="bed"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.50000.AB.flipped.bw" type="bw"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.50000.AB.flipped.bedgraph" type="bedgraph"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.200000.AB.flipped.bw" type="bw"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.10000.AB.flipped.bw" type="bw"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.20000.AB.flipped.bw" type="bw"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\25.12.16_gene_annotations\H9_HAP1.genes.coding.bed" type="bed"/>
+    </Resources>
+    <Panel height="574" name="DataPanel" width="3421">
+        <Track attributeKey="H9_T2T_v0.1_collated.5000.AB.flipped.bedgraph" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.5000.AB.flipped.bedgraph" name="H9_T2T_v0.1_collated.5000.AB.flipped.bedgraph" renderer="BAR_CHART" visible="true" windowFunction="none">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.18616" minimum="-1.06733" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.5000.AB.flipped.bw" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.5000.AB.flipped.bw" name="H9_T2T_v0.1_collated.5000.AB.flipped.bw" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.18616" minimum="-1.06733" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.10000.AB.flipped.bedgraph" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.10000.AB.flipped.bedgraph" name="H9_T2T_v0.1_collated.10000.AB.flipped.bedgraph" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.23511" minimum="-0.867881" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.10000.AB.flipped.bw" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.10000.AB.flipped.bw" name="H9_T2T_v0.1_collated.10000.AB.flipped.bw" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.23511" minimum="-0.867881" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.20000.AB.flipped.bedgraph" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.20000.AB.flipped.bedgraph" name="H9_T2T_v0.1_collated.20000.AB.flipped.bedgraph" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="0.978247" minimum="-0.617195" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.20000.AB.flipped.bw" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.20000.AB.flipped.bw" name="H9_T2T_v0.1_collated.20000.AB.flipped.bw" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="0.978247" minimum="-0.617195" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.50000.AB.flipped.bedgraph" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.50000.AB.flipped.bedgraph" name="H9_T2T_v0.1_collated.50000.AB.flipped.bedgraph" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="0.909693" minimum="-0.51485" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.50000.AB.flipped.bw" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.50000.AB.flipped.bw" name="H9_T2T_v0.1_collated.50000.AB.flipped.bw" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="0.909693" minimum="-0.51485" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.100000.AB.flipped.bedgraph" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.100000.AB.flipped.bedgraph" name="H9_T2T_v0.1_collated.100000.AB.flipped.bedgraph" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="0.888518" minimum="-0.486939" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.100000.AB.flipped.bw" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.100000.AB.flipped.bw" name="H9_T2T_v0.1_collated.100000.AB.flipped.bw" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="0.888518" minimum="-0.486939" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.200000.AB.flipped.bedgraph" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.200000.AB.flipped.bedgraph" name="H9_T2T_v0.1_collated.200000.AB.flipped.bedgraph" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="0.864794" minimum="-0.418847" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="H9_T2T_v0.1_collated.200000.AB.flipped.bw" autoScale="true" clazz="org.broad.igv.track.DataSourceTrack" fontSize="14" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.200000.AB.flipped.bw" name="H9_T2T_v0.1_collated.200000.AB.flipped.bw" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="0.864794" minimum="-0.418847" type="LINEAR"/>
+        </Track>
+    </Panel>
+    <Panel height="571" name="FeaturePanel" width="3421">
+        <Track attributeKey="Reference sequence" clazz="org.broad.igv.track.SequenceTrack" fontSize="14" id="Reference sequence" name="Reference sequence" sequenceTranslationStrandValue="+" shouldShowTranslation="true" visible="true"/>
+        <Track attributeKey="H9_T2T_v0.1_collated.5000.AB.flipped.bed" clazz="org.broad.igv.track.FeatureTrack" colorScale="ContinuousColorScale;0.0;519.0;255,255,255;0,0,178" fontSize="14" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.5000.AB.flipped.bed" name="H9_T2T_v0.1_collated.5000.AB.flipped.bed" visible="true"/>
+        <Track attributeKey="H9_T2T_v0.1_collated.10000.AB.flipped.bed" clazz="org.broad.igv.track.FeatureTrack" colorScale="ContinuousColorScale;0.0;208.0;255,255,255;0,0,178" fontSize="14" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.10000.AB.flipped.bed" name="H9_T2T_v0.1_collated.10000.AB.flipped.bed" visible="true"/>
+        <Track attributeKey="H9_T2T_v0.1_collated.20000.AB.flipped.bed" clazz="org.broad.igv.track.FeatureTrack" colorScale="ContinuousColorScale;0.0;89.0;255,255,255;0,0,178" fontSize="14" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.20000.AB.flipped.bed" name="H9_T2T_v0.1_collated.20000.AB.flipped.bed" visible="true"/>
+        <Track attributeKey="H9_T2T_v0.1_collated.50000.AB.flipped.bed" clazz="org.broad.igv.track.FeatureTrack" colorScale="ContinuousColorScale;0.0;32.0;255,255,255;0,0,178" fontSize="14" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.50000.AB.flipped.bed" name="H9_T2T_v0.1_collated.50000.AB.flipped.bed" visible="true"/>
+        <Track attributeKey="H9_T2T_v0.1_collated.100000.AB.flipped.bed" clazz="org.broad.igv.track.FeatureTrack" colorScale="ContinuousColorScale;0.0;12.0;255,255,255;0,0,178" fontSize="14" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.100000.AB.flipped.bed" name="H9_T2T_v0.1_collated.100000.AB.flipped.bed" visible="true"/>
+        <Track attributeKey="H9_T2T_v0.1_collated.200000.AB.flipped.bed" clazz="org.broad.igv.track.FeatureTrack" colorScale="ContinuousColorScale;0.0;9.0;255,255,255;0,0,178" fontSize="14" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\26.02.07_cooltools_flipped_E1\H9_T2T_v0.1_collated.200000.AB.flipped.bed" name="H9_T2T_v0.1_collated.200000.AB.flipped.bed" visible="true"/>
+        <Track attributeKey="H9_HAP1.genes.coding.bed" clazz="org.broad.igv.track.FeatureTrack" fontSize="14" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\25.12.16_gene_annotations\H9_HAP1.genes.coding.bed" name="H9_HAP1.genes.coding.bed" visible="true"/>
+        <Track attributeKey="H9_HAP2.genes.coding.bed" clazz="org.broad.igv.track.FeatureTrack" fontSize="14" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\25.12.16_gene_annotations\H9_HAP2.genes.coding.bed" name="H9_HAP2.genes.coding.bed" visible="true"/>
+    </Panel>
+    <PanelLayout dividerFractions="0.5"/>
+    <HiddenAttributes>
+        <Attribute name="DATA FILE"/>
+        <Attribute name="DATA TYPE"/>
+        <Attribute name="NAME"/>
+    </HiddenAttributes>
+</Session>
