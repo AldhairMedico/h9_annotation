@@ -6,7 +6,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import seaborn as sns
 
+sns.set_style("ticks")
 plt.rcParams['font.family'] = 'Arial'
 plt.rcParams['font.size'] = 10
 import os
@@ -118,7 +120,7 @@ def plot_nx(data: Dict[str, Tuple[List[float], List[float]]],
         output_path: Path to save the figure
         log_scale: If True, use log Y axis; otherwise linear with Mbp ticks
     """
-    fig, ax = plt.subplots(figsize=(4, 4))
+    fig, ax = plt.subplots(figsize=(3.25, 3.25))
 
     # Sort by palette order for consistent legend
     palette_order = list(PALETTE.keys())
@@ -128,7 +130,7 @@ def plot_nx(data: Dict[str, Tuple[List[float], List[float]]],
     for name in sorted_names:
         nx_pct, lengths = data[name]
         color = PALETTE.get(name, "#8D8D8D")
-        ax.plot(nx_pct, lengths, label=name, color=color, linewidth=2, rasterized=True)
+        ax.plot(nx_pct, lengths, label=name, color=color, linewidth=1, rasterized=True)
 
     ax.set_xlabel("Nx (%)")
     ax.set_xlim(0, 105)
@@ -145,9 +147,17 @@ def plot_nx(data: Dict[str, Tuple[List[float], List[float]]],
 
     # Legend: two-column, compact font; bottom-left for log, top-right for linear
     legend_loc = 'lower left' if log_scale else 'upper right'
-    ax.legend(loc=legend_loc, fontsize=7, ncol=2)
+    # Legend handles: small circles instead of long lines
+    handles, labels = ax.get_legend_handles_labels()
+    legend_handles = [plt.Line2D([0], [0], marker='o', color=h.get_color(),
+                                 linestyle='', markersize=4) for h in handles]
+    ax.legend(legend_handles, labels, loc=legend_loc, fontsize=6, ncol=2,
+              columnspacing=0.25, handletextpad=0.3)
 
-    plt.tight_layout()
+    sns.despine(ax=ax)
+
+    # Axes padding: Increasing left/bottom or decreasing right/top shrinks the plot area
+    fig.subplots_adjust(left=0.16, right=0.90, top=0.90, bottom=0.16)
     base, _ = os.path.splitext(output_path)
     for ext in (".png", ".pdf", ".svg"):
         path = base + ext
