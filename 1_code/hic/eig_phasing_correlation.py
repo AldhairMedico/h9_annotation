@@ -6,6 +6,7 @@ Generate per-chromosome track vs. E1 scatter plots and genome-wide correlation s
 
 import os
 import glob
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr, pearsonr
@@ -16,6 +17,19 @@ TRACKS = {
     "gc": ("gc.bedgraph", "GC content (%)", 100),
     "coding_cov": ("coding_cov.bedgraph", "Coding gene coverage", 1),
 }
+
+
+def compute_delta(e1_values, coding_values):
+    """Delta = median(coding | top 20% E1) - median(coding | bottom 20% E1)."""
+    e1 = np.asarray(e1_values, dtype=float)
+    cod = np.asarray(coding_values, dtype=float)
+    if len(e1) < 10:
+        return np.nan
+    q80, q20 = np.percentile(e1, 80), np.percentile(e1, 20)
+    top, bot = e1 >= q80, e1 <= q20
+    if top.sum() < 2 or bot.sum() < 2:
+        return np.nan
+    return float(np.median(cod[top]) - np.median(cod[bot]))
 
 
 def make_plots():
@@ -78,6 +92,15 @@ def make_plots():
                     "spearman_p": spearman_p,
                 }
 
+                if track_name == "coding_cov":
+                    delta = compute_delta(grp["E1"].values, grp[track_name].values)
+                    flip_recommended = (
+                        True if (not np.isnan(delta) and delta < 0)
+                        else (False if not np.isnan(delta) else np.nan)
+                    )
+                    chrom_stats[chrom]["delta"] = delta
+                    chrom_stats[chrom]["flip_recommended"] = flip_recommended
+
             chroms_sorted = sorted(chrom_stats.keys())
 
             # Generate scatter plots with legends
@@ -133,18 +156,42 @@ def make_plots():
             fig.savefig(os.path.join(out_dir, f"{hap}_{res}_{track_name}_pearson_summary.png"), dpi=600)
             plt.close(fig)
 
+            # Delta barplot (coding_cov only)
+            if track_name == "coding_cov":
+                delta_vals = [chrom_stats[c].get("delta", 0) for c in chroms_sorted]
+                flip_flags = [chrom_stats[c].get("flip_recommended", False) for c in chroms_sorted]
+                colors = [
+                    "#CCCCCC" if (isinstance(f, float) and np.isnan(f))
+                    else "#E38AAA" if f
+                    else "#6F9DD0"
+                    for f in flip_flags
+                ]
+                fig, ax = plt.subplots(figsize=(8, 4))
+                ax.bar(chroms_sorted, delta_vals, color=colors)
+                ax.axhline(0, color="gray", linewidth=1)
+                ax.set_xticks(range(len(chroms_sorted)))
+                ax.set_xticklabels(chroms_sorted, rotation=90, fontsize=6)
+                ax.set_ylabel("Δ (median coding top 20% E1 − bottom 20% E1)")
+                fig.tight_layout()
+                fig.savefig(os.path.join(out_dir, f"{hap}_{res}_delta_summary.png"), dpi=600)
+                plt.close(fig)
+
             # Export summary statistics to TSV
             summary_rows = []
             for chrom in chroms_sorted:
                 stats = chrom_stats[chrom]
-                summary_rows.append({
+                row = {
                     "track": track_name,
                     "chrom": chrom,
                     "spearman_rho": stats["spearman_rho"],
                     "spearman_p": stats["spearman_p"],
                     "pearson_r": stats["pearson_r"],
                     "pearson_p": stats["pearson_p"],
-                })
+                }
+                if track_name == "coding_cov":
+                    row["delta"] = stats.get("delta", "")
+                    row["flip_recommended"] = stats.get("flip_recommended", "")
+                summary_rows.append(row)
             df_summary = pd.DataFrame(summary_rows)
             summary_path = os.path.join(out_dir, f"{hap}_{res}_{track_name}_summary_stats.tsv")
             df_summary.to_csv(summary_path, sep="\t", index=False)

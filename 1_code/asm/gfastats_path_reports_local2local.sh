@@ -4,7 +4,7 @@ set -e
 # Paths
 wd="/mnt/d/research/h9_annotation"
 in_dir="$wd/2_data/2.1_raw"
-out_dir="$wd/2_data/2.2_processed/gfastats"
+out_dir="$wd/2_data/2.2_processed/26.01.09_gfastats"
 
 mkdir -p "$out_dir"
 
