@@ -157,7 +157,7 @@ def plot_nx(data: Dict[str, Tuple[List[float], List[float]]],
     sns.despine(ax=ax)
 
     # Axes padding: Increasing left/bottom or decreasing right/top shrinks the plot area
-    fig.subplots_adjust(left=0.16, right=0.90, top=0.90, bottom=0.16)
+    fig.subplots_adjust(left=0.16, right=0.95, top=0.90, bottom=0.16)
     base, _ = os.path.splitext(output_path)
     for ext in (".png", ".pdf", ".svg"):
         path = base + ext
