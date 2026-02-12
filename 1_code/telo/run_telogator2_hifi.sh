@@ -15,8 +15,9 @@ set -euo pipefail
 # ---- compact base ----
 WD="/lustre/fs5/vgl/scratch/amedico/h9_annotation"
 INPUT_DIR="${WD}/2_data/2.1_raw/hifi"
-OUTPUT_DIR="${WD}/2_data/2.2_processed/telogator2_hifi_n3"
+OUTPUT_DIR="${WD}/2_data/2.2_processed/telogator2_hifi_n3_h9ref"
 TELOGATOR2_DIR="/lustre/fs5/vgl/scratch/amedico/tools/telogator2"
+TELOGATOR2_REF=
 
 mkdir -p "$OUTPUT_DIR"
 cd "$WD"
