@@ -13,6 +13,9 @@ __pycache__/
 # Figures (keep only README)
 !figures/README.md
 
+# KEEP TELOGATOR2 REF
+!2_data/2.2_processed/H9_T2T_v0.1_dip.telogator2.ref.fa
+
 # Logs & temp
 *.log
 *.out
