@@ -2,7 +2,7 @@
 #SBATCH --job-name=telogator2_h9
 #SBATCH --output=%x_%j_%a_%A.out
 #SBATCH --error=%x_%j_%a_%A.err
-#SBATCH --partition=vgl_c
+#SBATCH --partition=vgl_a
 #SBATCH --account=jarv_condo_bank
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ WD="/lustre/fs5/vgl/scratch/amedico/h9_annotation"
 INPUT_DIR="${WD}/2_data/2.1_raw/hifi"
 OUTPUT_DIR="${WD}/2_data/2.2_processed/telogator2_hifi_n3_h9ref"
 TELOGATOR2_DIR="/lustre/fs5/vgl/scratch/amedico/tools/telogator2"
-TELOGATOR2_REF=
+TELOGATOR2_REF="${WD}/2_data/2.2_processed/H9_T2T_v0.1_dip.telogator2.ref.fa"
 
 mkdir -p "$OUTPUT_DIR"
 cd "$WD"
@@ -37,6 +37,7 @@ INPUTS=(
 python "${TELOGATOR2_DIR}/telogator2.py" \
   -i "${INPUTS[@]}" \
   -o "$OUTPUT_DIR" \
+  -t "$TELOGATOR2_REF"
   -r "$READ_TYPE" \
   -n "$MIN_CLUSTER_READS" \
   -p 32
