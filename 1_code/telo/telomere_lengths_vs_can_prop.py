@@ -36,13 +36,13 @@ from adjustText import adjust_text
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
-INPUT_BED = os.path.join(REPO_ROOT, "2_data", "2.2_processed", "25.12.10_teloscope_compiled", "25.12.10_asms_x1_TTAGGG_v1.3.terminal_telomeres.bed")
+INPUT_BED = os.path.join(REPO_ROOT, "2_data", "2.2_processed", "25.12.10_teloscope_compiled", "25.12.10_asms_x1_TTAGGG_v1.3.terminal_telomeres_YAOv1.bed")
 
 # Output dir
 OUT_DIR = os.path.join(REPO_ROOT, "3_figures", "3.1_draft", "26.01.29_telomeres")
 os.makedirs(OUT_DIR, exist_ok=True)
 
-# Figure basenames (v5)
+# Figure basenames
 FIG1_BASENAME = "scatter_by_assembly"
 FIG2_BASENAME = "scatter_H9_length_vs_canonical"
 
@@ -50,8 +50,10 @@ FIG2_BASENAME = "scatter_H9_length_vs_canonical"
 ASSEMBLY_LABELS: Dict[str, str] = {
     "GCA_000001405.29_GRCh38.p14_genomic.chr.fna": "GRCh38",
     "GCA_009914755.4_T2T-CHM13v2.0_genomic.chr.fna": "CHM13",
-    "GWHGEYB00000000.1.genome.fasta.gz": "YAO pat",
-    "GWHGEYC00000000.1.genome.fasta.gz": "YAO mat",
+    "GWHDOOG00000000.genome.chr.fasta.gz": "YAOv1 pat",
+    "GWHDQZJ00000000.genome.chr.fasta.gz": "YAOv1 mat",
+    "GWHGEYB00000000.1.genome.fasta.gz": "YAOv2 pat",
+    "GWHGEYC00000000.1.genome.fasta.gz": "YAOv2 mat",
     "GCA_018852605.3_hg002v1.1.pat_genomic.fna": "HG002 pat",
     "GCA_018852615.3_hg002v1.1.mat_genomic.chr.fna": "HG002 mat",
     "GCA_050656345.1_RPE1V1.1_Haplotype_1_genomic.chr.fna": "RPE1 hap1",
@@ -66,8 +68,10 @@ ASSEMBLY_LABELS: Dict[str, str] = {
 ASSEMBLY_ORDER: List[str] = [
     "GRCh38",
     "CHM13",
-    "YAO mat",
-    "YAO pat",
+    "YAOv1 mat",
+    "YAOv1 pat",
+    "YAOv2 mat",
+    "YAOv2 pat",
     "HG002 mat",
     "HG002 pat",
     "RPE1 hap1",
@@ -82,8 +86,10 @@ ASSEMBLY_ORDER: List[str] = [
 PALETTE: Dict[str, str] = {
     "GRCh38"    : "#999999",  # Neutral Gray
     "CHM13"     : "#F0E442",  # Yellow
-    "YAO pat" : "#FF5353",
-    "YAO mat" : "#FFA5A5",
+    "YAOv1 mat" : "#330000",  # Deep Red
+    "YAOv1 pat" : "#800000",  # Dark Red
+    "YAOv2 mat" : "#FF5353",  # Red
+    "YAOv2 pat" : "#FFA5A5",  # Light Red
     "HG002 mat" : "#0072B2",  # Okabe–Ito Blue
     "HG002 pat" : "#56B4E9",  # Okabe–Ito Sky Blue
     "RPE1 hap1" : "#984EA3",  # Purple
@@ -341,7 +347,7 @@ def main() -> None:
     make_plot_length_vs_canonical_scatter(df, OUT_DIR, FIG1_BASENAME)
 
     # Fig 2: H9-only scatter with chr labels (length vs canonical %)
-    make_plot_h9_length_vs_canonical_scatter(df, OUT_DIR, FIG2_BASENAME)
+    # make_plot_h9_length_vs_canonical_scatter(df, OUT_DIR, FIG2_BASENAME)
 
 if __name__ == "__main__":
     main()
