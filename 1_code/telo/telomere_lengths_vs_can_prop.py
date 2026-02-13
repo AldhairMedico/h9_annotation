@@ -178,6 +178,9 @@ def legend_inside_br(ax, labels_colors):
     ax.legend(handles=handles, frameon=True, fontsize=7, loc="lower right")
 
 def make_plot_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, basename: str) -> None:
+    # Filter out GRCh38
+    df = df[df["assembly_label"] != "GRCh38"].copy()
+    
     present = []
     for a in ASSEMBLY_ORDER:
         if a in set(df["assembly_label"].unique()):
@@ -188,7 +191,7 @@ def make_plot_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, basena
     if not present:
         return
 
-    fig, ax = plt.subplots(figsize=(5.0, 5.0), dpi=600)  # square
+    fig, ax = plt.subplots(figsize=(4, 4), dpi=600)  # square
     labels_colors = []
     for asm in present:
         sub = df[df["assembly_label"] == asm]
@@ -196,19 +199,15 @@ def make_plot_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, basena
             continue
         col = PALETTE.get(asm, "#BBBBBB")
         labels_colors.append((asm, col))
-        ax.scatter(sub["tel_length_kbp"], sub["canonical_pct"], s=16, alpha=0.85,
+        ax.scatter(sub["tel_length_kbp"], sub["canonical_pct"], s=12, alpha=0.7,
                    edgecolor="black", linewidth=0.2, c=col)
 
     ax.set_xlabel("Telomere length (Kbp)")
     ax.set_ylabel("Canonical proportion (%)")
     y_min_scatter = float(np.nanmin(df["canonical_pct"])) - 1.0
-    ax.set_ylim(y_min_scatter, 100)
+    ax.set_ylim(y_min_scatter, 102)
 
-    # === SCALE TOGGLE === set both to 'linear' or 'log' as needed
-    # ax.set_xscale('linear'); ax.set_yscale('linear')
-    # ax.set_xscale('log');    ax.set_yscale('log')
-
-    ax.grid(True, which="major", axis="both", linewidth=0.6, alpha=0.35, color="lightgrey")
+    ax.grid(True, which="major", axis="both", linewidth=0.4, alpha=0.20, color="lightgrey")
     legend_inside_br(ax, labels_colors)
 
     for spine in ax.spines.values():
