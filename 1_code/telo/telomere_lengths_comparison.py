@@ -3,19 +3,15 @@
 """
 telomere_lengths_comparison.py
 
-Using Teloscope terminal telomere annotations from:
-  data/2_processed/asms_x1_TTAGGG_v1.3.terminal_telomeres.bed
+Using Teloscope terminal telomere annotations.
 
 This script:
-  1) Fig 1: Paired scatter H9 hap1 vs hap2 telomere lengths (per chr arm),
-     with chromosome labels and Pearson R² + p-value (bottom-right).
-  2) Fig 2A: Rainclouds (half-violin + thin box + jitter) of telomere length per assembly,
-     using the given palette; outliers shown hollow and excluded from stats; outputs
-     pairwise tests (U test) with BH & Bonferroni p-adj.
-     Fig 2B: Pairwise matrix — upper triangle shows Δ(mean Kbp) as text; lower triangle
-     shows -log10(p-adj Bonf.) heatmap.
+  1) Rainclouds (half-violin + thin box + jitter) of telomere length per assembly
+     in both vertical and horizontal layouts; outliers shown hollow and excluded
+     from stats.
+  2) Outputs pairwise tests (U test) with BH & Bonferroni p-adj to TSV.
 
-All PNG saved at 600 dpi; PNG + PDF go to ./figures.
+All PNG saved at 600 dpi; PNG + PDF go to plots_dir.
 """
 
 import os
@@ -29,6 +25,15 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# Global font: Arial 10
+plt.rcParams.update({
+    "font.family": "Arial",
+    "font.size": 10,
+    "axes.labelsize": 10,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+})
+
 # stats
 try:
     from scipy.stats import mannwhitneyu, pearsonr, gaussian_kde
@@ -41,20 +46,29 @@ except Exception:
 # CONFIG
 # --------------------------------------------------------------------------
 
-WD = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root
-INPUT_BED = os.path.join(WD, "data", "2_processed", "asms_x1_TTAGGG_v1.3.terminal_telomeres.bed")
-OUT_DIR = os.path.join(WD, "figures")
+script_dir  = os.path.dirname(os.path.abspath(__file__))
+base_dir    = os.path.dirname(os.path.dirname(script_dir))
+data_dir    = os.path.join(base_dir, "2_data", "2.2_processed")
+figures_dir = os.path.join(base_dir, "3_figures", "3.1_draft")
+run_label   = "v1"
 
-# Figure basenames (v5)
-FIG1_BASENAME  = "scatter_H9_hap1_vs_hap2_v5"
-FIG2A_BASENAME = "raincloud_by_assembly_v5"
-FIG2B_BASENAME = "pairwise_heatmap_v5"
+plots_dir = os.path.join(figures_dir, "26.01.29_telomeres")
+os.makedirs(plots_dir, exist_ok=True)
+
+INPUT_BED = os.path.join(
+    data_dir, "25.12.10_teloscope_compiled",
+    "25.12.10_asms_x1_TTAGGG_v1.3.terminal_telomeres.bed",
+)
+OUT_DIR = plots_dir
+
+# Figure basenames
+FIG_VERTICAL_BASENAME  = "raincloud_by_assembly_vertical"
+FIG_HORIZONTAL_BASENAME = "raincloud_by_assembly_horizontal"
 
 PAIRWISE_PVALS_TSV = "telomere_length_pairwise_pvalues.tsv"  # written into OUT_DIR
 
 # Explicit mapping of raw sequence file path -> concise assembly label
 ASSEMBLY_LABELS: Dict[str, str] = {
-    "GCA_000001405.29_GRCh38.p14_genomic.chr.fna": "GRCh38",
     "GCA_009914755.4_T2T-CHM13v2.0_genomic.chr.fna": "CHM13",
     "GWHGEYB00000000.1.genome.fasta.gz": "YAO pat",
     "GWHGEYC00000000.1.genome.fasta.gz": "YAO mat",
@@ -70,23 +84,21 @@ ASSEMBLY_LABELS: Dict[str, str] = {
 
 # X order
 ASSEMBLY_ORDER: List[str] = [
-    "GRCh38",
     "CHM13",
-    "YAO mat",
-    "YAO pat",
     "HG002 mat",
     "HG002 pat",
-    "RPE1 hap1",
-    "RPE1 hap2",
     "I002C hap1",
     "I002C hap2",
+    "YAO mat",
+    "YAO pat",
+    "RPE1 hap1",
+    "RPE1 hap2",
     "H9 hap1",
     "H9 hap2",
 ]
 
 # Palette (user-updated; do not change)
 PALETTE: Dict[str, str] = {
-    "GRCh38"    : "#999999",  # Neutral Gray
     "CHM13"     : "#F0E442",  # Yellow
     "YAO pat" : "#FF5353",
     "YAO mat" : "#FFA5A5",
@@ -189,7 +201,7 @@ def split_outliers_iqr(x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 # RAINCLOUD HELPERS ─ half-violin + thin box + jitter (no seaborn)
 # --------------------------------------------------------------------------
 
-def draw_half_violin(ax, center_x, vals, color, width_violin=0.32):
+def draw_half_violin(ax, center_x, vals, color, width_violin=0.32, horizontal=False):
     if gaussian_kde is None:
         return
     vals = np.asarray(vals, dtype=float)
@@ -197,15 +209,20 @@ def draw_half_violin(ax, center_x, vals, color, width_violin=0.32):
     if vals.size < 2 or np.max(vals) == np.min(vals):
         return
     kde = gaussian_kde(vals, bw_method=0.3)
-    y = np.linspace(vals.min(), vals.max(), 300)
-    dens = kde(y)
+    t = np.linspace(vals.min(), vals.max(), 300)
+    dens = kde(t)
     if dens.max() > 0:
         scale = width_violin / dens.max()
-        x_right = center_x + dens * scale
-        ax.fill_betweenx(y, center_x, x_right, alpha=0.6, linewidth=0, color=color, zorder=1)
-        ax.plot(x_right, y, linewidth=1.0, color=color, zorder=2)
+        if horizontal:
+            y_top = center_x + dens * scale
+            ax.fill_between(t, center_x, y_top, alpha=0.6, linewidth=0, color=color, zorder=1)
+            ax.plot(t, y_top, linewidth=1.0, color=color, zorder=2)
+        else:
+            x_right = center_x + dens * scale
+            ax.fill_betweenx(t, center_x, x_right, alpha=0.6, linewidth=0, color=color, zorder=1)
+            ax.plot(x_right, t, linewidth=1.0, color=color, zorder=2)
 
-def draw_thin_box(ax, center_x, vals, color, box_width=0.20):
+def draw_thin_box(ax, center_x, vals, color, box_width=0.12, horizontal=False):
     if len(vals) == 0:
         return
     bp = ax.boxplot(
@@ -215,97 +232,17 @@ def draw_thin_box(ax, center_x, vals, color, box_width=0.20):
         patch_artist=True,
         showfliers=False,
         manage_ticks=False,
+        vert=not horizontal,
         zorder=3,
     )
     for patch in bp['boxes']:
         patch.set_facecolor(color)
         patch.set_edgecolor('black')
-        patch.set_linewidth(1.0)
+        patch.set_linewidth(0.6)
     for key in ('whiskers', 'caps', 'medians'):
         for obj in bp[key]:
             obj.set_color('black')
-            obj.set_linewidth(1.0)
-
-# --------------------------------------------------------------------------
-# FIG 1: H9 hap1 vs hap2 paired scatter with chr labels + R², p
-# --------------------------------------------------------------------------
-
-def make_plot_h9_hap1_vs_hap2(df: pd.DataFrame, out_dir: str, basename: str) -> None:
-    sub = df[df["assembly_label"].isin(["H9 hap1", "H9 hap2"])].copy()
-    if sub.empty:
-        print("[WARN] No H9; skipping Fig1.")
-        return
-
-    sub["hap"] = np.where(sub["assembly_label"].eq("H9 hap1"), "hap1", "hap2")
-
-    def get_chrom(h: str) -> str:
-        for tag in ["_hap1", "_hap2"]:
-            if h.endswith(tag):
-                return h[:-len(tag)]
-        return h
-    sub["chrom"] = sub["header"].astype(str).map(get_chrom)
-    sub["arm"] = sub["label"].astype(str).str.replace(r"[^pq]", "", regex=True).str[:1]
-    sub["tel_id"] = sub["chrom"] + "_" + sub["arm"]
-
-    pivot = (
-        sub.pivot_table(index=["chrom", "arm", "tel_id"], columns="hap", values="tel_length_kbp", aggfunc="mean")
-        .reset_index()
-        .dropna(subset=["hap1", "hap2"])
-    )
-    if pivot.empty:
-        print("[WARN] No matched H9 telomeres; skipping Fig1.")
-        return
-
-    # Pearson R^2 and p
-    r2, pval = np.nan, np.nan
-    if pearsonr is not None:
-        r, p = pearsonr(pivot["hap1"].values, pivot["hap2"].values)
-        r2, pval = r * r, p
-
-    fig, ax = plt.subplots(figsize=(4.0, 4.0), dpi=600)
-
-    # color by arm; label each point with chromosome number only (no 'chr', no arm)
-    arm_colors = {"p": "#1f77b4", "q": "#ff7f0e"}
-    for arm_val, grp in pivot.groupby("arm"):
-        c = arm_colors.get(arm_val, "#7f7f7f")
-        ax.scatter(grp["hap1"], grp["hap2"], s=30, alpha=0.66, edgecolor="black", linewidth=0.3, label=f"{arm_val}", c=c)
-        for _, row in grp.iterrows():
-            num = str(row["chrom"])
-            if num.startswith("chr"):
-                num = num[3:]
-            ax.text(row["hap1"] + 0.1, row["hap2"] + 0.1, num, fontsize=5,  # moved farther, smaller font
-                    va="bottom", ha="left", color=c)
-
-    max_len = float(max(pivot["hap1"].max(), pivot["hap2"].max()))
-    ax.plot([0, max_len], [0, max_len], linestyle="--", color="grey", linewidth=1.0)
-
-    ax.set_xlabel("Hap1 telomere length (Kbp)")
-    ax.set_ylabel("Hap2 telomere length (Kbp)")
-    ax.set_xlim(0, max_len * 1.05)
-    ax.set_ylim(0, max_len * 1.05)
-
-    # === SCALE TOGGLE === set both to 'linear' or 'log' as needed
-    # ax.set_xscale('linear'); ax.set_yscale('linear')
-    # ax.set_xscale('log');    ax.set_yscale('log')
-
-    # Legend: same font for title and entries
-    ax.legend(title="Arm", frameon=True, loc="upper left", fontsize=8, title_fontsize=8)
-
-    # R^2 and p (bottom-right inside)
-    if np.isfinite(r2) and np.isfinite(pval):
-        txt = f"R² = {r2:.3f}\np = {pval:.3g}"
-        ax.text(0.98, 0.02, txt, transform=ax.transAxes, ha="right", va="bottom",
-                fontsize=8, bbox=dict(facecolor="white", edgecolor="none", alpha=0.6))
-
-    for spine in ax.spines.values():
-        spine.set_linewidth(1.0)
-    ax.tick_params(axis="both", which="both", length=3, width=1.0, direction="out")
-
-    plt.tight_layout()
-    ensure_dir(out_dir)
-    fig.savefig(os.path.join(out_dir, f"{basename}.png"), dpi=600)
-    fig.savefig(os.path.join(out_dir, f"{basename}.pdf"))
-    plt.close(fig)
+            obj.set_linewidth(0.6)
 
 # --------------------------------------------------------------------------
 # Pairwise tests (exclude outliers) + p-adj
@@ -322,6 +259,18 @@ def adjust_pvals_bh(pvals: np.ndarray) -> np.ndarray:
     ranked[order[::-1]] = np.minimum.accumulate(ranked[order[::-1]])
     return np.clip(ranked, 0, 1)
 
+def _inlier_stats(v: np.ndarray) -> Dict[str, float]:
+    """Return mean, median, sd, min, max for an inlier array."""
+    if v.size == 0:
+        return {"mean": np.nan, "median": np.nan, "sd": np.nan, "min": np.nan, "max": np.nan}
+    return {
+        "mean": float(np.mean(v)),
+        "median": float(np.median(v)),
+        "sd": float(np.std(v, ddof=1)) if v.size > 1 else 0.0,
+        "min": float(np.min(v)),
+        "max": float(np.max(v)),
+    }
+
 def compute_pairwise_pvalues(df: pd.DataFrame, assemblies: List[str], out_dir: str, outfile: str) -> pd.DataFrame:
     rows = []
     inliers_by_asm = {}
@@ -330,21 +279,33 @@ def compute_pairwise_pvalues(df: pd.DataFrame, assemblies: List[str], out_dir: s
         inliers, _ = split_outliers_iqr(vals)
         inliers_by_asm[a] = inliers
 
+    method_str = "Mann-Whitney U (two-sided), outliers excluded (IQR)"
+    print(f"[INFO] Statistical method: {method_str}")
+
     for a1, a2 in combinations(assemblies, 2):
         v1 = inliers_by_asm[a1]
         v2 = inliers_by_asm[a2]
+        s1 = _inlier_stats(v1)
+        s2 = _inlier_stats(v2)
         if len(v1) == 0 or len(v2) == 0:
-            pval = np.nan; method = "NA (insufficient data)"
+            pval = np.nan
         else:
             if mannwhitneyu is None:
-                pval = np.nan; method = "Mann-Whitney U not available"
+                pval = np.nan
             else:
                 try:
                     _stat, pval = mannwhitneyu(v1, v2, alternative="two-sided")
-                    method = "Mann-Whitney U (two-sided), outliers excluded (IQR)"
-                except Exception as e:
-                    pval = np.nan; method = f"Error: {e}"
-        rows.append({"assembly1": a1, "assembly2": a2, "p_value": pval, "method": method})
+                except Exception:
+                    pval = np.nan
+        rows.append({
+            "assembly1": a1,
+            "assembly2": a2,
+            "mean1": s1["mean"], "median1": s1["median"], "sd1": s1["sd"],
+            "min1": s1["min"], "max1": s1["max"],
+            "mean2": s2["mean"], "median2": s2["median"], "sd2": s2["sd"],
+            "min2": s2["min"], "max2": s2["max"],
+            "p_value": pval,
+        })
 
     out = pd.DataFrame(rows)
     if not out.empty:
@@ -401,23 +362,22 @@ def add_significance_bars(ax, xlabels: List[str], sig_df: pd.DataFrame, alpha=0.
     ax.set_ylim(y_min, height + h_step*1.2)
 
 # --------------------------------------------------------------------------
-# FIG 2A: Rainclouds per assembly + Bonferroni bars limited to H9 pairs
+# RAINCLOUD: Vertical layout
 # --------------------------------------------------------------------------
 
-def make_plot_assemblies_raincloud(df: pd.DataFrame, out_dir: str, basename: str) -> List[str]:
+def make_plot_raincloud_vertical(df: pd.DataFrame, out_dir: str, basename: str) -> List[str]:
     candidate = [a for a in ASSEMBLY_ORDER if a in set(df["assembly_label"].unique())]
     if not candidate:
-        print("[WARN] No assemblies; skipping Fig2A.")
+        print("[WARN] No assemblies; skipping vertical raincloud.")
         return []
 
     rng = np.random.default_rng(6)
-    jitter_sd = 0.04
-    x_offset = 0.25
-    violin_w = 0.32
-    point_size = 14
+    jitter_sd = 0.03
+    x_offset = 0.20
+    violin_w = 0.28
+    point_size = 4
 
-    # Taller figure to accommodate brackets
-    fig, ax = plt.subplots(figsize=(max(6.5, 0.5 * len(candidate) + 2), 6.8), dpi=600)
+    fig, ax = plt.subplots(figsize=(2, 2), dpi=600)
 
     xs, xticklabels, plotted = [], [], []
     for i, asm in enumerate(candidate, start=1):
@@ -429,37 +389,26 @@ def make_plot_assemblies_raincloud(df: pd.DataFrame, out_dir: str, basename: str
             continue
 
         color = PALETTE.get(asm, "#BBBBBB")
-        draw_half_violin(ax, i, inliers, color, width_violin=violin_w)
+        draw_half_violin(ax, i, inliers, color, width_violin=violin_w, horizontal=False)
 
         if inliers.size > 0:
-            draw_thin_box(ax, i, inliers, color)
+            draw_thin_box(ax, i, inliers, color, horizontal=False)
             x_jit = rng.normal(loc=i - x_offset, scale=jitter_sd, size=inliers.size)
-            ax.scatter(x_jit, inliers, s=point_size, linewidths=0.6, facecolors=color, edgecolors="black", zorder=4, alpha=0.95)
+            ax.scatter(x_jit, inliers, s=point_size, linewidths=0.3, facecolors=color, edgecolors="black", zorder=4, alpha=0.95)
 
         if outliers.size > 0:
             x_jit_o = rng.normal(loc=i - x_offset, scale=jitter_sd, size=outliers.size)
-            ax.scatter(x_jit_o, outliers, s=point_size, linewidths=0.8, facecolors='none', edgecolors=color, zorder=4)
+            ax.scatter(x_jit_o, outliers, s=point_size, linewidths=0.4, facecolors='none', edgecolors=color, zorder=4)
 
         xs.append(i); xticklabels.append(asm); plotted.append(asm)
 
     ax.set_xticks(xs, xticklabels, rotation=45, ha="right")
-    ax.set_ylabel("Telomere length (Kbp)")
-    # ax.set_xlabel("Assembly")
-    ax.grid(axis="y", linestyle=":", linewidth=0.6, alpha=0.5)
-
-    # Pairwise p-vals for plotted groups only
-    sig_df_all = compute_pairwise_pvalues(df, plotted, out_dir, PAIRWISE_PVALS_TSV)
-
-    # # Only Bonferroni-significant pairs that involve H9 hap1/hap2
-    # if sig_df_all is not None and not sig_df_all.empty:
-    #     h9_set = {"H9 hap1", "H9 hap2"}
-    #     mask = sig_df_all.apply(lambda r: (r["assembly1"] in h9_set) or (r["assembly2"] in h9_set), axis=1)
-    #     sig_df_h9 = sig_df_all[mask]
-    #     add_significance_bars(ax, xticklabels, sig_df_h9, alpha=0.05, use_col="p_adj_bonf", font_size=5)
+    ax.set_ylabel("Telomere length (kbp)")
+    ax.grid(axis="y", linestyle=":", linewidth=0.4, alpha=0.5)
 
     for spine in ax.spines.values():
-        spine.set_linewidth(1.0)
-    ax.tick_params(axis="both", which="both", length=3, width=1.0, direction="out")
+        spine.set_linewidth(0.4)
+    ax.tick_params(axis="both", which="both", length=2, width=0.4, direction="out")
 
     plt.tight_layout()
     ensure_dir(out_dir)
@@ -470,65 +419,61 @@ def make_plot_assemblies_raincloud(df: pd.DataFrame, out_dir: str, basename: str
     return plotted
 
 # --------------------------------------------------------------------------
-# FIG 2B: Pairwise upper Δmean (text) / lower -log10(padj) heatmap
+# RAINCLOUD: Horizontal layout
 # --------------------------------------------------------------------------
 
-def make_plot_pairwise_heatmap(df: pd.DataFrame, assemblies: List[str], out_dir: str, basename: str) -> None:
-    if not assemblies:
-        return
-    # Compute inlier means (consistent with stats)
-    means = {}
-    for a in assemblies:
-        vals = df.loc[df["assembly_label"] == a, "tel_length_kbp"].dropna().values
-        inl, _ = split_outliers_iqr(vals)
-        means[a] = float(np.mean(inl)) if inl.size else np.nan
+def make_plot_raincloud_horizontal(df: pd.DataFrame, out_dir: str, basename: str) -> List[str]:
+    candidate = [a for a in ASSEMBLY_ORDER if a in set(df["assembly_label"].unique())]
+    if not candidate:
+        print("[WARN] No assemblies; skipping horizontal raincloud.")
+        return []
 
-    # Get p-adj (Bonf) matrix
-    sig_df = compute_pairwise_pvalues(df, assemblies, out_dir, PAIRWISE_PVALS_TSV)
-    n = len(assemblies)
-    padj = np.full((n, n), np.nan, dtype=float)
-    for _, r in sig_df.iterrows():
-        a1, a2 = r["assembly1"], r["assembly2"]
-        if a1 in assemblies and a2 in assemblies and np.isfinite(r["p_adj_bonf"]):
-            i, j = assemblies.index(a1), assemblies.index(a2)
-            padj[i, j] = r["p_adj_bonf"]
-            padj[j, i] = r["p_adj_bonf"]
+    rng = np.random.default_rng(6)
+    jitter_sd = 0.03
+    y_offset = 0.20
+    violin_w = 0.28
+    point_size = 4
 
-    # Lower triangle: -log10(padj)
-    with np.errstate(divide="ignore"):
-        neglog = -np.log10(padj)
-    # mask upper triangle (including diagonal) for heatmap
-    mask_lower = np.triu(np.ones_like(neglog, dtype=bool))
-    neglog_masked = np.ma.masked_where(mask_lower, neglog)
+    fig, ax = plt.subplots(figsize=(2, 2), dpi=600)
 
-    # Build figure
-    fig, ax = plt.subplots(figsize=(max(6.0, 0.5*n + 2), max(6.0, 0.5*n + 2)), dpi=600)
-    im = ax.imshow(neglog_masked, cmap="viridis", interpolation="nearest")
+    ys, yticklabels, plotted = [], [], []
+    for i, asm in enumerate(candidate, start=1):
+        sub = df[df["assembly_label"] == asm]
+        vals_all = sub["tel_length_kbp"].dropna().values
+        inliers, outliers = split_outliers_iqr(vals_all)
 
-    # Upper triangle text: Δmean(row - col) in Kbp
-    for i in range(n):
-        for j in range(n):
-            if j > i:
-                m = means.get(assemblies[i], np.nan) - means.get(assemblies[j], np.nan)
-                if np.isfinite(m):
-                    ax.text(j, i, f"{m:.1f}", ha="center", va="center", fontsize=7, color="black")
+        if inliers.size == 0 and outliers.size == 0:
+            continue
 
-    # Ticks/labels
-    ax.set_xticks(range(n)); ax.set_yticks(range(n))
-    ax.set_xticklabels(assemblies, rotation=45, ha="right")
-    ax.set_yticklabels(assemblies)
-    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label("-log10(p-adj Bonf.)")
+        color = PALETTE.get(asm, "#BBBBBB")
+        draw_half_violin(ax, i, inliers, color, width_violin=violin_w, horizontal=True)
 
-    # Grid lines
-    ax.set_xlim(-0.5, n-0.5); ax.set_ylim(n-0.5, -0.5)
-    ax.grid(False)
+        if inliers.size > 0:
+            draw_thin_box(ax, i, inliers, color, horizontal=True)
+            y_jit = rng.normal(loc=i - y_offset, scale=jitter_sd, size=inliers.size)
+            ax.scatter(inliers, y_jit, s=point_size, linewidths=0.3, facecolors=color, edgecolors="black", zorder=4, alpha=0.95)
+
+        if outliers.size > 0:
+            y_jit_o = rng.normal(loc=i - y_offset, scale=jitter_sd, size=outliers.size)
+            ax.scatter(outliers, y_jit_o, s=point_size, linewidths=0.4, facecolors='none', edgecolors=color, zorder=4)
+
+        ys.append(i); yticklabels.append(asm); plotted.append(asm)
+
+    ax.set_yticks(ys, yticklabels)
+    ax.set_xlabel("Telomere length (kbp)")
+    ax.grid(axis="x", linestyle=":", linewidth=0.4, alpha=0.5)
+
+    for spine in ax.spines.values():
+        spine.set_linewidth(0.4)
+    ax.tick_params(axis="both", which="both", length=2, width=0.4, direction="out")
 
     plt.tight_layout()
     ensure_dir(out_dir)
     fig.savefig(os.path.join(out_dir, f"{basename}.png"), dpi=600)
     fig.savefig(os.path.join(out_dir, f"{basename}.pdf"))
     plt.close(fig)
+
+    return plotted
 
 # --------------------------------------------------------------------------
 # MAIN
@@ -538,14 +483,14 @@ def main() -> None:
     ensure_dir(OUT_DIR)
     df = parse_teloscope_terminal_file(INPUT_BED)
 
-    # Fig 1: H9 hap1 vs hap2, paired by chr arm, labels + R²/p
-    make_plot_h9_hap1_vs_hap2(df, OUT_DIR, FIG1_BASENAME)
+    # Vertical raincloud
+    plotted = make_plot_raincloud_vertical(df, OUT_DIR, FIG_VERTICAL_BASENAME)
 
-    # Fig 2A: rainclouds per assembly + Bonferroni bars limited to H9 pairs
-    plotted = make_plot_assemblies_raincloud(df, OUT_DIR, FIG2A_BASENAME)
-    
-    # Fig 2B: pairwise matrix (using the same plotted assemblies)
-    make_plot_pairwise_heatmap(df, plotted, OUT_DIR, FIG2B_BASENAME)
+    # Horizontal raincloud
+    make_plot_raincloud_horizontal(df, OUT_DIR, FIG_HORIZONTAL_BASENAME)
+
+    # Pairwise p-values TSV only
+    compute_pairwise_pvalues(df, plotted, OUT_DIR, PAIRWISE_PVALS_TSV)
 
 if __name__ == "__main__":
     main()

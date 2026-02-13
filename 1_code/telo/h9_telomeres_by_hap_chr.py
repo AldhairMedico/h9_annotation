@@ -92,11 +92,25 @@ LABEL = 6
 TITLE = 7
 
 LEGEND_HANDLES = [
-    Patch(fc=PALETTE["hap1"], label="hap1"),
-    Patch(fc=PALETTE["hap2"], label="hap2"),
+    Patch(fc=PALETTE["hap1"], label="hap1", linewidth=0),
+    Patch(fc=PALETTE["hap2"], label="hap2", linewidth=0),
 ]
+LEGEND_KW = dict(
+    handles=LEGEND_HANDLES, fontsize=TICK, loc="upper left",
+    frameon=False, handlelength=0.8, handleheight=0.6, handletextpad=0.4,
+    borderpad=0.2, labelspacing=0.3,
+)
 
 x_max = float(np.ceil(df["length_kbp"].max() / 5) * 5)
+
+# Global thin spines / ticks
+plt.rcParams.update({
+    "axes.linewidth":    0.4,
+    "xtick.major.width": 0.4,
+    "ytick.major.width": 0.4,
+    "xtick.major.size":  2.0,
+    "ytick.major.size":  2.0,
+})
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -117,7 +131,7 @@ def _save(fig, stem: str) -> None:
 def _box(ax):
     for sp in ax.spines.values():
         sp.set_edgecolor("black")
-        sp.set_linewidth(0.5)
+        sp.set_linewidth(0.4)
         sp.set_visible(True)
 
 
@@ -134,9 +148,13 @@ def _len(arm_df: pd.DataFrame, hap: str, chrom: str) -> float:
 chroms = sorted(df["chr_display"].unique(), key=_chr_key)
 n_chr  = len(chroms)
 
+# Short chromosome labels for vertical plot (1, 2, … 22, X)
+chr_short = [c.replace("chr", "") for c in chroms]
+
 # Grouped-bar geometry  (two thin bars per chromosome)
 bw     = 0.30           # bar half-width (thin)
 offsets = {"hap1": -bw / 2 - 0.02, "hap2": bw / 2 + 0.02}
+pad    = 0.5            # padding so first/last chr aren't clipped
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Horizontal layout  (← p-arm | chr labels | q-arm →)
@@ -157,22 +175,24 @@ for hap in ("hap1", "hap2"):
 
 # p-arm: bars grow LEFT
 ax_p.set_xlim(x_max, 0)
-ax_p.invert_yaxis()
+ax_p.set_ylim(n_chr - 1 + pad, -pad)  # tight, inverted
 ax_p.set_yticks(yy)
 ax_p.set_yticklabels(chroms, fontsize=TICK)
 ax_p.yaxis.tick_right()
+ax_p.yaxis.set_label_position("right")
 ax_p.set_xlabel("Telomere length (kbp)", fontsize=LABEL)
 ax_p.set_title("p-arm", fontsize=TITLE)
 ax_p.tick_params(axis="x", labelsize=TICK)
+# ax_p.tick_params(axis="y", length=0)  # no tick marks on shared axis
+ax_p.legend(**LEGEND_KW)
 _box(ax_p)
 
 # q-arm: bars grow RIGHT
 ax_q.set_xlim(0, x_max)
+ax_q.set_ylim(n_chr - 1 + pad, -pad)
 ax_q.set_xlabel("Telomere length (kbp)", fontsize=LABEL)
 ax_q.set_title("q-arm", fontsize=TITLE)
 ax_q.tick_params(axis="x", labelsize=TICK)
-ax_q.legend(handles=LEGEND_HANDLES, fontsize=TICK, loc="lower right",
-            framealpha=0.8)
 _box(ax_q)
 
 _save(fig, f"h9_telo_lengths_horizontal_{run_label}")
@@ -195,21 +215,22 @@ for hap in ("hap1", "hap2"):
              color=PALETTE[hap], edgecolor="none", alpha=0.9)
 
 # p-arm: bars extend UP
+ax_p.set_xlim(-pad, n_chr - 1 + pad)
 ax_p.set_ylim(0, x_max)
-ax_p.set_ylabel("Length (kbp)", fontsize=LABEL)
+ax_p.set_ylabel("Telomere length (kbp)", fontsize=LABEL)
 ax_p.set_title("p-arm", fontsize=TITLE)
 ax_p.tick_params(axis="y", labelsize=TICK)
-ax_p.legend(handles=LEGEND_HANDLES, fontsize=TICK, loc="upper right",
-            framealpha=0.8)
+ax_p.legend(**LEGEND_KW)
 _box(ax_p)
 
 # q-arm: bars extend DOWN
+ax_q.set_xlim(-pad, n_chr - 1 + pad)
 ax_q.set_ylim(x_max, 0)
-ax_q.set_ylabel("Length (kbp)", fontsize=LABEL)
+ax_q.set_ylabel("Telomere length (kbp)", fontsize=LABEL)
 ax_q.set_title("q-arm", fontsize=TITLE)
 ax_q.tick_params(axis="y", labelsize=TICK)
 ax_q.set_xticks(xx)
-ax_q.set_xticklabels(chroms, fontsize=TICK, rotation=45, ha="right")
+ax_q.set_xticklabels(chr_short, fontsize=TICK, rotation=0)
 _box(ax_q)
 
 _save(fig, f"h9_telo_lengths_vertical_{run_label}")
