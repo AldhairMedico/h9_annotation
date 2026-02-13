@@ -29,9 +29,9 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({
     "font.family": "Arial",
     "font.size": 10,
-    "axes.labelsize": 10,
-    "xtick.labelsize": 10,
-    "ytick.labelsize": 10,
+    "axes.labelsize": 9,
+    "xtick.labelsize": 9,
+    "ytick.labelsize": 9,
 })
 
 # stats
@@ -216,11 +216,11 @@ def draw_half_violin(ax, center_x, vals, color, width_violin=0.32, horizontal=Fa
         if horizontal:
             y_top = center_x + dens * scale
             ax.fill_between(t, center_x, y_top, alpha=0.6, linewidth=0, color=color, zorder=1)
-            ax.plot(t, y_top, linewidth=1.0, color=color, zorder=2)
+            ax.plot(t, y_top, linewidth=0.3, color=color, zorder=2)
         else:
             x_right = center_x + dens * scale
             ax.fill_betweenx(t, center_x, x_right, alpha=0.6, linewidth=0, color=color, zorder=1)
-            ax.plot(x_right, t, linewidth=1.0, color=color, zorder=2)
+            ax.plot(x_right, t, linewidth=0.3, color=color, zorder=2)
 
 def draw_thin_box(ax, center_x, vals, color, box_width=0.12, horizontal=False):
     if len(vals) == 0:
@@ -238,11 +238,11 @@ def draw_thin_box(ax, center_x, vals, color, box_width=0.12, horizontal=False):
     for patch in bp['boxes']:
         patch.set_facecolor(color)
         patch.set_edgecolor('black')
-        patch.set_linewidth(0.6)
+        patch.set_linewidth(0.3)
     for key in ('whiskers', 'caps', 'medians'):
         for obj in bp[key]:
             obj.set_color('black')
-            obj.set_linewidth(0.6)
+            obj.set_linewidth(0.3)
 
 # --------------------------------------------------------------------------
 # Pairwise tests (exclude outliers) + p-adj
@@ -373,11 +373,11 @@ def make_plot_raincloud_vertical(df: pd.DataFrame, out_dir: str, basename: str) 
 
     rng = np.random.default_rng(6)
     jitter_sd = 0.03
-    x_offset = 0.20
+    x_offset = 0.25
     violin_w = 0.28
     point_size = 4
 
-    fig, ax = plt.subplots(figsize=(2, 2), dpi=600)
+    fig, ax = plt.subplots(figsize=(3, 3), dpi=600)
 
     xs, xticklabels, plotted = [], [], []
     for i, asm in enumerate(candidate, start=1):
@@ -404,6 +404,7 @@ def make_plot_raincloud_vertical(df: pd.DataFrame, out_dir: str, basename: str) 
 
     ax.set_xticks(xs, xticklabels, rotation=45, ha="right")
     ax.set_ylabel("Telomere length (kbp)")
+    ax.set_yticks([0, 5, 10, 15, 20])
     ax.grid(axis="y", linestyle=":", linewidth=0.4, alpha=0.5)
 
     for spine in ax.spines.values():
@@ -414,6 +415,7 @@ def make_plot_raincloud_vertical(df: pd.DataFrame, out_dir: str, basename: str) 
     ensure_dir(out_dir)
     fig.savefig(os.path.join(out_dir, f"{basename}.png"), dpi=600)
     fig.savefig(os.path.join(out_dir, f"{basename}.pdf"))
+    fig.savefig(os.path.join(out_dir, f"{basename}.svg"))
     plt.close(fig)
 
     return plotted
@@ -430,11 +432,11 @@ def make_plot_raincloud_horizontal(df: pd.DataFrame, out_dir: str, basename: str
 
     rng = np.random.default_rng(6)
     jitter_sd = 0.03
-    y_offset = 0.20
+    y_offset = 0.25
     violin_w = 0.28
     point_size = 4
 
-    fig, ax = plt.subplots(figsize=(2, 2), dpi=600)
+    fig, ax = plt.subplots(figsize=(3, 3), dpi=600)
 
     ys, yticklabels, plotted = [], [], []
     for i, asm in enumerate(candidate, start=1):
@@ -460,7 +462,9 @@ def make_plot_raincloud_horizontal(df: pd.DataFrame, out_dir: str, basename: str
         ys.append(i); yticklabels.append(asm); plotted.append(asm)
 
     ax.set_yticks(ys, yticklabels)
+    ax.invert_yaxis()
     ax.set_xlabel("Telomere length (kbp)")
+    ax.set_xticks([0, 5, 10, 15, 20])
     ax.grid(axis="x", linestyle=":", linewidth=0.4, alpha=0.5)
 
     for spine in ax.spines.values():
@@ -471,6 +475,7 @@ def make_plot_raincloud_horizontal(df: pd.DataFrame, out_dir: str, basename: str
     ensure_dir(out_dir)
     fig.savefig(os.path.join(out_dir, f"{basename}.png"), dpi=600)
     fig.savefig(os.path.join(out_dir, f"{basename}.pdf"))
+    fig.savefig(os.path.join(out_dir, f"{basename}.svg"))
     plt.close(fig)
 
     return plotted
