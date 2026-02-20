@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from scipy import stats
 from adjustText import adjust_text
+import seaborn as sns
 
 # --------------------------------------------------------------------------
 # CONFIG
@@ -191,7 +192,15 @@ def make_plot_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, basena
     if not present:
         return
 
-    fig, ax = plt.subplots(figsize=(4, 4), dpi=600)  # square
+    # Set seaborn style for publication-quality figure
+    sns.set_style("ticks", {"axes.linewidth": 0.4, "xtick.major.width": 0.4, 
+                             "ytick.major.width": 0.4, "xtick.minor.width": 0.3,
+                             "ytick.minor.width": 0.3})
+    sns.set_context("paper", rc={"font.size": 8, "axes.labelsize": 9, 
+                                  "xtick.labelsize": 8, "ytick.labelsize": 8,
+                                  "legend.fontsize": 7})
+    
+    fig, ax = plt.subplots(figsize=(3.6, 3.6), dpi=600)  # square
     labels_colors = []
     for asm in present:
         sub = df[df["assembly_label"] == asm]
@@ -199,21 +208,23 @@ def make_plot_length_vs_canonical_scatter(df: pd.DataFrame, out_dir: str, basena
             continue
         col = PALETTE.get(asm, "#BBBBBB")
         labels_colors.append((asm, col))
-        ax.scatter(sub["tel_length_kbp"], sub["canonical_pct"], s=12, alpha=0.7,
-                   edgecolor="black", linewidth=0.2, c=col)
+        ax.scatter(sub["tel_length_kbp"], sub["canonical_pct"], s=10, alpha=0.7,
+                   edgecolor="black", linewidth=0.15, c=col)
 
     ax.set_xlabel("Telomere length (Kbp)")
     ax.set_ylabel("Canonical proportion (%)")
     y_min_scatter = float(np.nanmin(df["canonical_pct"])) - 1.0
     ax.set_ylim(y_min_scatter, 102)
 
-    ax.grid(True, which="major", axis="both", linewidth=0.4, alpha=0.20, color="lightgrey")
+    ax.grid(True, which="major", axis="both", linewidth=0.3, alpha=0.25, color="#DDDDDD")
     legend_inside_br(ax, labels_colors)
 
     for spine in ax.spines.values():
-        spine.set_linewidth(1.0)
-    ax.tick_params(axis="both", which="both", length=3, width=1.0, direction="out")
-
+        spine.set_linewidth(0.4)
+    ax.tick_params(axis="both", which="major", length=2.5, width=0.4, direction="out")
+    ax.tick_params(axis="both", which="minor", length=1.5, width=0.3, direction="out")
+    
+    sns.despine(ax=ax, offset=0, trim=False)
     plt.tight_layout()
     ensure_dir(out_dir)
     fig.savefig(os.path.join(out_dir, f"{basename}.png"), dpi=600)
