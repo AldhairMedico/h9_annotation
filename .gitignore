@@ -52,7 +52,7 @@ __pycache__/
 *.bed
 *.bed.gz
 *.gff3.gz
-
+*.npz
 
 # Telomere annotation
 *_canonical_matches.bed
