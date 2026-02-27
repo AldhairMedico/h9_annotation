@@ -1,0 +1,55 @@
+================================================================================
+H9 TELOMERE LENGTH STATISTICAL ANALYSIS
+================================================================================
+
+1. SAMPLE SIZES
+--------------------------------------------------------------------------------
+Hap1 total chromosome ends: 46
+Hap2 total chromosome ends: 45
+Matched pairs (chr-end present in both haplotypes): 45
+
+Hap1-only ends (missing in hap2):
+  chr22_p: 13.57 kbp
+
+
+2. DESCRIPTIVE STATISTICS
+--------------------------------------------------------------------------------
+Hap1 (n=46): mean=8.01, median=6.93, SD=4.49, range=[0.76, 19.22] kbp
+Hap2 (n=45): mean=7.20, median=5.94, SD=4.39, range=[1.86, 22.21] kbp
+
+3. NORMALITY TESTS (Shapiro-Wilk)
+--------------------------------------------------------------------------------
+Hap1: W=0.9567, p=0.08516 (n=46)
+Hap2: W=0.8772, p=0.000199 (n=45)
+
+4. PAIRED ANALYSIS (matched chromosome ends)
+--------------------------------------------------------------------------------
+Matched pairs: n=45
+Mean difference (hap1 - hap2): 0.69 kbp
+Median difference: 0.53 kbp
+SD of differences: 5.14 kbp
+
+Pearson correlation: r=0.3253, R²=0.1058, p=0.02922
+Spearman correlation: ρ=0.2412, p=0.1104
+
+Wilcoxon signed-rank test: statistic=439.00, p=0.3822 (n pairs=45)
+Interpretation: Tests if median difference between paired observations is zero
+
+Paired t-test: t=0.8993, p=0.3734 (n pairs=45)
+Interpretation: Tests if mean difference between paired observations is zero
+
+
+5. INDEPENDENT SAMPLES ANALYSIS (ignoring pairing)
+--------------------------------------------------------------------------------
+NOTE: This approach ignores the natural pairing of chromosome ends.
+The paired analysis above is more appropriate for this dataset.
+
+Welch's t-test: t=0.8731, p=0.3849, df≈89
+  (n_hap1=46, n_hap2=45)
+Interpretation: Tests if means differ between independent groups
+
+Mann-Whitney U test: U=1158.00, p=0.3308
+  (n_hap1=46, n_hap2=45)
+Interpretation: Tests if distributions differ between independent groups
+
+================================================================================
