@@ -46,10 +46,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
 # Use assembly metrics TSV (rows=metric, cols=assembly)
-reports_file = os.path.join(REPO_ROOT, "2_data", "2.2_processed", "25.12.10_asms_x1_TTAGGG_v1.3.assembly_metrics.tsv")
+reports_file = os.path.join(REPO_ROOT, "2_data", "2.2_processed", "25.12.10_teloscope_compiled", "25.12.10_asms_x1_TTAGGG_v1.3.assembly_metrics.tsv")
 
 # Output dir and formats
-plot_dir = os.path.join(REPO_ROOT, "3_figures", "3.1_draft" ,"26.01.29_telomeres")
+plot_dir = os.path.join(REPO_ROOT, "3_figures", "3.1_draft" ,"26.03.02_telomeres_nucflag_combined_9")
 os.makedirs(plot_dir, exist_ok=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -59,16 +59,25 @@ plt.rcParams.update({
     'font.weight': 'regular',
     'font.size': 9,
     'axes.linewidth': 0.5,
+    'axes.edgecolor': 'black',
+    'axes.labelcolor': 'black',
     'axes.titlesize': 9,
     'axes.labelsize': 9,
     'xtick.major.width': 0.5,
     'ytick.major.width': 0.5,
+    'xtick.color': 'black',
+    'ytick.color': 'black',
     'xtick.labelsize': 9,
     'ytick.labelsize': 9,
+    'text.color': 'black',
     'legend.fontsize': 9,
     'legend.frameon': False,
     'figure.dpi': 600,
-    'savefig.dpi': 600
+    'savefig.dpi': 600,
+    # Editable text in vector formats (PDF/SVG/EPS)
+    'pdf.fonttype': 42,
+    'ps.fonttype': 42,
+    'svg.fonttype': 'none',
 })
 
 # ──────────────────────────────────────────────────────────────────────────────

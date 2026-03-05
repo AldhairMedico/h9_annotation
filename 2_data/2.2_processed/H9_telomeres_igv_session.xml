@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Session genome="D:\research\h9_annotation\2_data\2.1_raw\H9_T2T_v0.1_dip.fasta" locus="chr8_hap1:0-3025" version="8">
+    <Resources>
+        <Resource index="https://genomeark.s3.amazonaws.com/downstream_analyses/H9_temp/h9_diploid_ONT_filtered.bam.bai" path="https://genomeark.s3.amazonaws.com/downstream_analyses/H9_temp/h9_diploid_ONT_filtered.bam" type="bam"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\25.12.10_teloscope_asm\H9_T2T_v0.1_hap2.fasta_terminal_telomeres.bed" type="bed"/>
+        <Resource index="https://genomeark.s3.amazonaws.com/downstream_analyses/H9_temp/h9_diploid_hifi_filtered.bam.bai" path="https://genomeark.s3.amazonaws.com/downstream_analyses/H9_temp/h9_diploid_hifi_filtered.bam" type="bam"/>
+        <Resource index="https://public.gi.ucsc.edu/~ipacar/notch2nl-hub/t2t_h9_v01_diploid/t2t_h9_hifi/t2t_h9_v01_diploid.t2t_h9_hifi.bam.bai" path="https://public.gi.ucsc.edu/~ipacar/notch2nl-hub/t2t_h9_v01_diploid/t2t_h9_hifi/t2t_h9_v01_diploid.t2t_h9_hifi.bam" type="bam"/>
+        <Resource path="D:\research\h9_annotation\2_data\2.2_processed\25.12.10_teloscope_asm\H9_T2T_v0.1_hap1.fasta_terminal_telomeres.bed" type="bed"/>
+    </Resources>
+    <Panel height="1944" name="Panel1772116399669" width="1127">
+        <Track attributeKey="t2t_h9_v01_diploid.t2t_h9_hifi.bam Coverage" autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" fontSize="16" id="https://public.gi.ucsc.edu/~ipacar/notch2nl-hub/t2t_h9_v01_diploid/t2t_h9_hifi/t2t_h9_v01_diploid.t2t_h9_hifi.bam_coverage" name="t2t_h9_v01_diploid.t2t_h9_hifi.bam Coverage" snpThreshold="0.2" visible="true">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="t2t_h9_v01_diploid.t2t_h9_hifi.bam Junctions" autoScale="false" clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="16" groupByStrand="false" height="60" id="https://public.gi.ucsc.edu/~ipacar/notch2nl-hub/t2t_h9_v01_diploid/t2t_h9_hifi/t2t_h9_v01_diploid.t2t_h9_hifi.bam_junctions" maxdepth="50" name="t2t_h9_v01_diploid.t2t_h9_hifi.bam Junctions" visible="false"/>
+        <Track attributeKey="h9_diploid_hifi_filtered.bam Coverage" autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" fontSize="16" id="https://genomeark.s3.amazonaws.com/downstream_analyses/H9_temp/h9_diploid_hifi_filtered.bam_coverage" name="h9_diploid_hifi_filtered.bam Coverage" snpThreshold="0.2" visible="true">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="h9_diploid_ONT_filtered.bam Coverage" autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" fontSize="16" id="https://genomeark.s3.amazonaws.com/downstream_analyses/H9_temp/h9_diploid_ONT_filtered.bam_coverage" name="h9_diploid_ONT_filtered.bam Coverage" snpThreshold="0.2" visible="true">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="34.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track attributeKey="h9_diploid_hifi_filtered.bam" clazz="org.broad.igv.sam.AlignmentTrack" color="185,185,185" experimentType="THIRD_GEN" fontSize="16" id="https://genomeark.s3.amazonaws.com/downstream_analyses/H9_temp/h9_diploid_hifi_filtered.bam" name="h9_diploid_hifi_filtered.bam" visible="true">
+            <RenderOptions/>
+        </Track>
+        <Track attributeKey="t2t_h9_v01_diploid.t2t_h9_hifi.bam" clazz="org.broad.igv.sam.AlignmentTrack" color="185,185,185" experimentType="THIRD_GEN" fontSize="16" id="https://public.gi.ucsc.edu/~ipacar/notch2nl-hub/t2t_h9_v01_diploid/t2t_h9_hifi/t2t_h9_v01_diploid.t2t_h9_hifi.bam" name="t2t_h9_v01_diploid.t2t_h9_hifi.bam" visible="true">
+            <RenderOptions/>
+        </Track>
+    </Panel>
+    <Panel height="1094" name="Panel1772116636648" width="1127">
+        <Track attributeKey="h9_diploid_ONT_filtered.bam Junctions" autoScale="false" clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="16" groupByStrand="false" height="60" id="https://genomeark.s3.amazonaws.com/downstream_analyses/H9_temp/h9_diploid_ONT_filtered.bam_junctions" maxdepth="50" name="h9_diploid_ONT_filtered.bam Junctions" visible="false"/>
+        <Track attributeKey="h9_diploid_ONT_filtered.bam" clazz="org.broad.igv.sam.AlignmentTrack" color="185,185,185" displayMode="EXPANDED" experimentType="THIRD_GEN" fontSize="16" id="https://genomeark.s3.amazonaws.com/downstream_analyses/H9_temp/h9_diploid_ONT_filtered.bam" name="h9_diploid_ONT_filtered.bam" visible="true">
+            <RenderOptions/>
+        </Track>
+    </Panel>
+    <Panel height="155" name="FeaturePanel" width="1127">
+        <Track attributeKey="Reference sequence" clazz="org.broad.igv.track.SequenceTrack" fontSize="16" id="Reference sequence" name="Reference sequence" sequenceTranslationStrandValue="+" shouldShowTranslation="false" visible="true"/>
+        <Track attributeKey="H9_T2T_v0.1_hap1.fasta_terminal_telomeres.bed" clazz="org.broad.igv.track.FeatureTrack" fontSize="16" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\25.12.10_teloscope_asm\H9_T2T_v0.1_hap1.fasta_terminal_telomeres.bed" name="H9_T2T_v0.1_hap1.fasta_terminal_telomeres.bed" visible="true"/>
+        <Track attributeKey="H9_T2T_v0.1_hap2.fasta_terminal_telomeres.bed" clazz="org.broad.igv.track.FeatureTrack" fontSize="16" groupByStrand="false" id="D:\research\h9_annotation\2_data\2.2_processed\25.12.10_teloscope_asm\H9_T2T_v0.1_hap2.fasta_terminal_telomeres.bed" name="H9_T2T_v0.1_hap2.fasta_terminal_telomeres.bed" visible="true"/>
+    </Panel>
+    <PanelLayout dividerFractions="0.0052310374891020054,0.5187445510026155,0.8605056669572798"/>
+    <HiddenAttributes>
+        <Attribute name="DATA FILE"/>
+        <Attribute name="DATA TYPE"/>
+        <Attribute name="NAME"/>
+    </HiddenAttributes>
+</Session>

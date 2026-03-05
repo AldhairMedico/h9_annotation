@@ -43,15 +43,16 @@ data_dir    = os.path.join(base_dir, "2_data", "2.2_processed")
 figures_dir = os.path.join(base_dir, "3_figures", "3.1_draft")
 run_label   = "v1"
 
-plots_dir = os.path.join(figures_dir, "26.02.25_telomeres_nucflag")
+plots_dir = os.path.join(figures_dir, "26.02.27_telomeres_nucflag")
 os.makedirs(plots_dir, exist_ok=True)
 
 nucflag_dir = os.path.join(data_dir, "nucflag")
 
-terminal_telomeres = os.path.join(
-    data_dir, "25.12.10_teloscope_compiled",
-    "25.12.10_asms_x1_TTAGGG_v1.3.terminal_telomeres.bed",
-)
+teloscope_dir = os.path.join(data_dir, "25.12.10_teloscope_asm")
+terminal_telomeres = {
+    "hap1": os.path.join(teloscope_dir, "H9_T2T_v0.1_hap1.fasta_terminal_telomeres.bed"),
+    "hap2": os.path.join(teloscope_dir, "H9_T2T_v0.1_hap2.fasta_terminal_telomeres.bed"),
+}
 
 NUCFLAG_INTERSECTION = {
     "HiFi": os.path.join(nucflag_dir, "nucflag_teloscope_hifi.bed"),
@@ -63,11 +64,6 @@ stats_out = os.path.join(plots_dir, f"h9_nucflag_telomere_stats_{run_label}.tsv"
 # ═══════════════════════════════════════════════════════════════════════════════
 # Constants
 # ═══════════════════════════════════════════════════════════════════════════════
-ASSEMBLY_MAP: Dict[str, str] = {
-    "H9_T2T_v0.1_hap1.fasta": "H9 hap1",
-    "H9_T2T_v0.1_hap2.fasta": "H9 hap2",
-}
-
 CHR_ORDER = [f"chr{i}" for i in range(1, 23)] + ["chrX"]
 ACROCENTRIC    = {"chr13", "chr14", "chr15", "chr21", "chr22"}
 METACENTRIC    = {"chr1", "chr3", "chr16", "chr19", "chr20"}
@@ -121,9 +117,17 @@ HAP_ORDER = ["hap1", "hap2"]
 
 EXTS = ("png", "pdf", "svg")
 
-# Cell journal aesthetics (Arial, minimal spines, white background)
+# Cell journal aesthetics (Arial / DejaVu Sans fallback, minimal spines, white bg)
+_font_family = "Arial"
+try:
+    from matplotlib.font_manager import findfont, FontProperties
+    if findfont(FontProperties(family="Arial")) == findfont(FontProperties()):
+        _font_family = "DejaVu Sans"  # Arial not installed; use fallback
+except Exception:
+    _font_family = "DejaVu Sans"
+
 plt.rcParams.update({
-    "font.family":       "Arial",
+    "font.family":       _font_family,
     "font.size":         7,
     "axes.linewidth":    0.4,
     "xtick.major.width": 0.4,
@@ -166,29 +170,27 @@ def _box(ax):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 1. Load telomere data  (same logic as original script)
+# 1. Load telomere data  (per-hap teloscope BEDs, 10 columns, no assembly)
 # ═══════════════════════════════════════════════════════════════════════════════
 rows: list = []
-with open(terminal_telomeres, "r") as f:
-    for line in f:
-        fields = line.strip().split("\t")
-        if len(fields) == 11:
-            rows.append(fields)
-        elif len(fields) == 12:
-            rows.append([fields[0]] + fields[2:])
+for hap_label, telo_path in terminal_telomeres.items():
+    with open(telo_path, "r") as f:
+        for line in f:
+            fields = line.strip().split("\t")
+            if len(fields) == 10:
+                rows.append(fields)
 
 df_telo = pd.DataFrame(rows, columns=[
     "chr", "start", "end", "length", "label",
     "fwdCounts", "revCounts", "canCounts", "nonCanCounts",
-    "chr_length", "assembly",
+    "chr_length",
 ])
 for col in ("start", "end", "length", "chr_length"):
     df_telo[col] = pd.to_numeric(df_telo[col])
 
-df_telo["assembly_label"] = df_telo["assembly"].map(ASSEMBLY_MAP)
-df_telo = df_telo.loc[df_telo["assembly_label"].notna()].copy()
 df_telo["chr_display"] = df_telo["chr"].str.replace(r"_hap[12]$", "", regex=True)
-df_telo["hap"]         = df_telo["assembly_label"].str.replace("H9 ", "")
+df_telo["hap"]         = df_telo["chr"].str.extract(r"_(hap[12])$")[0]
+df_telo = df_telo.loc[df_telo["hap"].notna()].copy()
 df_telo["length_kbp"]  = df_telo["length"] / 1000.0
 df_telo["arm"]         = df_telo["label"]  # p / q
 
@@ -203,19 +205,25 @@ print(f"[INFO] Loaded {len(df_telo)} H9 telomere entries across {n_chr} chromoso
 # 2. Load NucFlag intersection data
 # ═══════════════════════════════════════════════════════════════════════════════
 def load_nucflag_intersection(path: str) -> pd.DataFrame:
-    """Parse bedtools intersect -wo output (11 columns)."""
+    """Parse bedtools intersect -wo output (17 columns).
+
+    Teloscope BED (5 cols): chr, start, end, length, arm
+    NucFlag BED9+2 (11 cols): chrom, chromStart, chromEnd, name,
+        score, strand, thickStart, thickEnd, itemRgb, zscore, af
+    Overlap (1 col): overlap_bp
+    """
     col_names = [
-        "telo_chr", "telo_start", "telo_end", "telo_length", "arm", "assembly",
-        "nf_chr", "nf_start", "nf_end", "nf_category", "overlap_bp",
+        "telo_chr", "telo_start", "telo_end", "telo_length", "arm",
+        "nf_chr", "nf_start", "nf_end", "nf_category",
+        "nf_score", "nf_strand", "nf_thickStart", "nf_thickEnd",
+        "nf_itemRgb", "nf_zscore", "nf_af",
+        "overlap_bp",
     ]
     df = pd.read_csv(path, sep="\t", header=None, names=col_names)
     for c in ("telo_start", "telo_end", "telo_length", "nf_start", "nf_end", "overlap_bp"):
         df[c] = pd.to_numeric(df[c])
     df["chr_display"] = df["telo_chr"].str.replace(r"_hap[12]$", "", regex=True)
-    df["hap"] = df["assembly"].map({
-        "H9_T2T_v0.1_hap1.fasta": "hap1",
-        "H9_T2T_v0.1_hap2.fasta": "hap2",
-    })
+    df["hap"] = df["telo_chr"].str.extract(r"_(hap[12])$")[0]
     df["overlap_kbp"] = df["overlap_bp"] / 1000.0
     return df
 
@@ -747,69 +755,183 @@ if len(nf_matrix) == 2:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 4. Comprehensive statistics  →  TSV
+# 4. Comprehensive statistics  →  separate TSV files + console summaries
 # ═══════════════════════════════════════════════════════════════════════════════
-print("\n── Statistics ──")
+print("\n" + "=" * 80)
+print("STATISTICS — H9 Telomere × NucFlag Analysis")
+print("=" * 80)
 
-stat_rows: list = []
+stats_dir = os.path.join(plots_dir, f"stats_{run_label}")
+os.makedirs(stats_dir, exist_ok=True)
 
 
-def _add(section: str, dataset: str, key: str, value) -> None:
-    stat_rows.append({"section": section, "dataset": dataset, "key": key, "value": value})
+def _write_section(filename: str, df: pd.DataFrame, description: str) -> None:
+    """Write a stats DataFrame to TSV and print a descriptive console summary."""
+    path = os.path.join(stats_dir, filename)
+    df.to_csv(path, sep="\t", index=False)
+    print(f"\n[SAVED] {path}  ({len(df)} rows)")
+    print(f"        {description}")
 
 
 # ── 4a  Per chr × arm × hap breakdown ──────────────────────────────────────
+print("\n" + "─" * 80)
+print("4a. PER-TELOMERE BREAKDOWN")
+print("    NucFlag category composition for every individual telomere")
+print("    (chr × arm × hap), with absolute length (kbp) and fraction.")
+print("─" * 80)
+
 for ds, mat in nf_matrix.items():
     cats_ds = [c for c in all_present_cats if c in mat.columns]
+    telo_rows: list = []
     for _, row in mat.iterrows():
-        prefix = f"{row['chr_display']}_{row['arm']}_{row['hap']}"
         tlen = row.get("telo_length_kbp", 0)
-        _add("per_telomere", ds, f"{prefix}_telo_length_kbp", f"{tlen:.3f}")
+        entry = {
+            "chromosome": row["chr_display"],
+            "arm": row["arm"],
+            "haplotype": row["hap"],
+            "telomere_length_kbp": f"{tlen:.3f}",
+        }
         for cat in cats_ds:
             v = row.get(cat, 0)
-            if v > 0:
-                _add("per_telomere", ds, f"{prefix}_{cat}_kbp", f"{v:.3f}")
-                _add("per_telomere", ds, f"{prefix}_{cat}_frac", f"{v / tlen:.4f}" if tlen else "NA")
+            entry[f"{cat}_kbp"] = f"{v:.3f}"
+            entry[f"{cat}_frac"] = f"{v / tlen:.4f}" if tlen else "NA"
+        telo_rows.append(entry)
+
+    df_telo_stats = pd.DataFrame(telo_rows)
+    _write_section(
+        f"4a_per_telomere_{ds}.tsv", df_telo_stats,
+        f"Per-telomere NucFlag breakdown for {ds}: "
+        f"{len(df_telo_stats)} telomeres across {mat['chr_display'].nunique()} chromosomes, "
+        f"{len(cats_ds)} NucFlag categories.",
+    )
+
+    # Console summary: total telomere length per haplotype
+    for hap in HAP_ORDER:
+        sub = mat.loc[mat["hap"] == hap]
+        total = sub["telo_length_kbp"].sum() if "telo_length_kbp" in sub.columns else sub[cats_ds].sum().sum()
+        n_telo = len(sub)
+        print(f"    {ds} {hap}: {n_telo} telomeres, total length = {total:.1f} kbp")
 
 # ── 4b  Global category summary ────────────────────────────────────────────
+print("\n" + "─" * 80)
+print("4b. GLOBAL CATEGORY SUMMARY")
+print("    Total kbp and fraction of telomere length occupied by each")
+print("    NucFlag category, aggregated across all chromosomes and haplotypes.")
+print("─" * 80)
+
 for ds, mat in nf_matrix.items():
     cats_ds = [c for c in all_present_cats if c in mat.columns]
     total_kbp = mat[cats_ds].sum().sum()
+    summary_rows: list = []
+    print(f"\n    {ds}  (total covered telomere length: {total_kbp:.1f} kbp)")
+    print(f"    {'Category':<20s} {'Total (kbp)':>12s} {'Fraction':>10s}")
+    print(f"    {'─' * 20} {'─' * 12} {'─' * 10}")
     for cat in cats_ds:
         s = mat[cat].sum()
-        _add("global_summary", ds, f"{cat}_total_kbp", f"{s:.3f}")
-        _add("global_summary", ds, f"{cat}_fraction", f"{s / total_kbp:.6f}" if total_kbp else "NA")
+        frac = s / total_kbp if total_kbp else 0
+        summary_rows.append({
+            "dataset": ds,
+            "category": cat,
+            "total_kbp": f"{s:.3f}",
+            "fraction": f"{frac:.6f}" if total_kbp else "NA",
+        })
+        print(f"    {cat:<20s} {s:>12.3f} {frac:>10.4f}")
+
+    df_global = pd.DataFrame(summary_rows)
+    _write_section(
+        f"4b_global_summary_{ds}.tsv", df_global,
+        f"Global NucFlag category summary for {ds}: fraction of total "
+        f"telomere length ({total_kbp:.1f} kbp) per category.",
+    )
 
 # ── 4c  p-arm vs q-arm comparison (Mann-Whitney U) ────────────────────────
+print("\n" + "─" * 80)
+print("4c. p-ARM vs q-ARM COMPARISON  (Mann-Whitney U test)")
+print("    Tests whether each NucFlag category's telomeric coverage differs")
+print("    significantly between p-arm and q-arm telomeres.")
+print("─" * 80)
+
+arm_rows: list = []
 for ds, mat in nf_matrix.items():
     cats_ds = [c for c in all_present_cats if c in mat.columns and mat[c].sum() > 0]
+    print(f"\n    {ds}")
+    print(f"    {'Category':<20s} {'p median':>10s} {'q median':>10s} {'U':>10s} {'p-value':>12s}")
+    print(f"    {'─' * 20} {'─' * 10} {'─' * 10} {'─' * 10} {'─' * 12}")
     for cat in cats_ds:
         p_vals = mat.loc[mat["arm"] == "p", cat].values
         q_vals = mat.loc[mat["arm"] == "q", cat].values
         if len(p_vals) > 1 and len(q_vals) > 1:
             u_stat, p_val = sp_stats.mannwhitneyu(p_vals, q_vals, alternative="two-sided")
-            _add("arm_comparison", ds, f"{cat}_U", f"{u_stat:.1f}")
-            _add("arm_comparison", ds, f"{cat}_pvalue", f"{p_val:.4e}")
-            _add("arm_comparison", ds, f"{cat}_p_median_kbp", f"{np.median(p_vals):.3f}")
-            _add("arm_comparison", ds, f"{cat}_q_median_kbp", f"{np.median(q_vals):.3f}")
+            sig = " *" if p_val < 0.05 else ""
+            arm_rows.append({
+                "dataset": ds, "category": cat,
+                "p_arm_median_kbp": f"{np.median(p_vals):.3f}",
+                "q_arm_median_kbp": f"{np.median(q_vals):.3f}",
+                "U_statistic": f"{u_stat:.1f}",
+                "p_value": f"{p_val:.4e}",
+                "significant_0.05": "yes" if p_val < 0.05 else "no",
+            })
+            print(f"    {cat:<20s} {np.median(p_vals):>10.3f} {np.median(q_vals):>10.3f} "
+                  f"{u_stat:>10.1f} {p_val:>12.4e}{sig}")
+
+if arm_rows:
+    _write_section(
+        "4c_arm_comparison.tsv", pd.DataFrame(arm_rows),
+        "Mann-Whitney U test comparing NucFlag category coverage (kbp) "
+        "between p-arm and q-arm telomeres.",
+    )
 
 # ── 4d  Acrocentric vs non-acrocentric (Mann-Whitney U) ───────────────────
+print("\n" + "─" * 80)
+print("4d. ACROCENTRIC vs NON-ACROCENTRIC COMPARISON  (Mann-Whitney U test)")
+print("    Tests whether NucFlag category coverage differs for telomeres on")
+print(f"    acrocentric chromosomes ({', '.join(sorted(ACROCENTRIC))}) vs the rest.")
+print("─" * 80)
+
+acro_rows: list = []
 for ds, mat in nf_matrix.items():
     cats_ds = [c for c in all_present_cats if c in mat.columns and mat[c].sum() > 0]
     mat_c = mat.copy()
     mat_c["is_acro"] = mat_c["chr_display"].isin(ACROCENTRIC)
+    n_acro_telo = mat_c["is_acro"].sum()
+    n_non_telo  = (~mat_c["is_acro"]).sum()
+    print(f"\n    {ds}  (acrocentric telomeres: {n_acro_telo}, non-acrocentric: {n_non_telo})")
+    print(f"    {'Category':<20s} {'acro med':>10s} {'non med':>10s} {'U':>10s} {'p-value':>12s}")
+    print(f"    {'─' * 20} {'─' * 10} {'─' * 10} {'─' * 10} {'─' * 12}")
     for cat in cats_ds:
         acro = mat_c.loc[mat_c["is_acro"], cat].values
         non  = mat_c.loc[~mat_c["is_acro"], cat].values
         if len(acro) > 1 and len(non) > 1:
             u_stat, p_val = sp_stats.mannwhitneyu(acro, non, alternative="two-sided")
-            _add("acro_comparison", ds, f"{cat}_U", f"{u_stat:.1f}")
-            _add("acro_comparison", ds, f"{cat}_pvalue", f"{p_val:.4e}")
-            _add("acro_comparison", ds, f"{cat}_acro_median_kbp", f"{np.median(acro):.3f}")
-            _add("acro_comparison", ds, f"{cat}_non_median_kbp",  f"{np.median(non):.3f}")
+            sig = " *" if p_val < 0.05 else ""
+            acro_rows.append({
+                "dataset": ds, "category": cat,
+                "acrocentric_median_kbp": f"{np.median(acro):.3f}",
+                "non_acrocentric_median_kbp": f"{np.median(non):.3f}",
+                "U_statistic": f"{u_stat:.1f}",
+                "p_value": f"{p_val:.4e}",
+                "significant_0.05": "yes" if p_val < 0.05 else "no",
+            })
+            print(f"    {cat:<20s} {np.median(acro):>10.3f} {np.median(non):>10.3f} "
+                  f"{u_stat:>10.1f} {p_val:>12.4e}{sig}")
+
+if acro_rows:
+    _write_section(
+        "4d_acrocentric_comparison.tsv", pd.DataFrame(acro_rows),
+        "Mann-Whitney U test comparing NucFlag category coverage (kbp) "
+        "between acrocentric and non-acrocentric chromosome telomeres.",
+    )
 
 # ── 4e  Hypergeometric enrichment — is each error category enriched in
 #         telomeric ends relative to the full 25 kbp NucFlag window?  ───────
+print("\n" + "─" * 80)
+print("4e. HYPERGEOMETRIC ENRICHMENT TEST")
+print("    Tests whether each NucFlag category is enriched in telomeric")
+print("    regions compared to the full terminal 25 kbp NucFlag window.")
+print("    fold > 1 = enriched in telomeres; fold < 1 = depleted.")
+print("─" * 80)
+
+hyper_rows: list = []
 for ds in nf_data:
     nf_raw = nf_data[ds]
     mat    = nf_matrix[ds]
@@ -818,49 +940,78 @@ for ds in nf_data:
     # Full NucFlag 25kbp data (all categories)
     nf_full_path = NUCFLAG_INTERSECTION[ds].replace("nucflag_teloscope_", "nucflag_telo_").replace(".bed", ".tsv")
     if os.path.isfile(nf_full_path):
-        nf_full = pd.read_csv(nf_full_path, sep="\t", header=None,
-                              names=["chr", "start", "end", "category"])
-        nf_full["length"] = nf_full["end"] - nf_full["start"]
+        nf_full = pd.read_csv(nf_full_path, sep="\t", comment="#",
+                              header=None,
+                              names=["chrom", "chromStart", "chromEnd", "name",
+                                     "score", "strand", "thickStart", "thickEnd",
+                                     "itemRgb", "zscore", "af"])
+        nf_full["chromStart"] = pd.to_numeric(nf_full["chromStart"])
+        nf_full["chromEnd"]   = pd.to_numeric(nf_full["chromEnd"])
+        nf_full["length"] = nf_full["chromEnd"] - nf_full["chromStart"]
+        nf_full["category"] = nf_full["name"]
         total_nf_bp = int(nf_full["length"].sum())
 
         # Total telomere bp
         total_telo_bp = int(nf_raw["overlap_bp"].sum())
 
+        print(f"\n    {ds}  (NucFlag window: {total_nf_bp:,} bp, telomere overlap: {total_telo_bp:,} bp)")
+        print(f"    {'Category':<20s} {'obs (bp)':>12s} {'exp (bp)':>12s} {'fold':>8s} {'p-value':>12s}")
+        print(f"    {'─' * 20} {'─' * 12} {'─' * 12} {'─' * 8} {'─' * 12}")
+
         for cat in cats_ds:
-            # Category bp in full NucFlag windows (population successes)
             K = int(nf_full.loc[nf_full["category"] == cat, "length"].sum())
-            # Category bp in telomere intersections (observed successes)
             k = int(nf_raw.loc[nf_raw["nf_category"] == cat, "overlap_bp"].sum())
-            N = total_nf_bp      # population size
-            n = total_telo_bp    # number of draws
+            N = total_nf_bp
+            n = total_telo_bp
 
             if N > 0 and K > 0 and n > 0:
-                # P(X >= k) under hypergeometric
                 pval = sp_stats.hypergeom.sf(k - 1, N, K, n)
                 expected = n * K / N
                 fold = k / expected if expected > 0 else float("inf")
-                _add("hypergeom_enrichment", ds, f"{cat}_k", str(k))
-                _add("hypergeom_enrichment", ds, f"{cat}_K", str(K))
-                _add("hypergeom_enrichment", ds, f"{cat}_N", str(N))
-                _add("hypergeom_enrichment", ds, f"{cat}_n", str(n))
-                _add("hypergeom_enrichment", ds, f"{cat}_expected", f"{expected:.1f}")
-                _add("hypergeom_enrichment", ds, f"{cat}_fold_enrichment", f"{fold:.3f}")
-                _add("hypergeom_enrichment", ds, f"{cat}_pvalue", f"{pval:.4e}")
+                sig = " *" if pval < 0.05 else ""
+                hyper_rows.append({
+                    "dataset": ds, "category": cat,
+                    "observed_bp": str(k),
+                    "expected_bp": f"{expected:.1f}",
+                    "population_category_bp_K": str(K),
+                    "population_total_bp_N": str(N),
+                    "telomere_total_bp_n": str(n),
+                    "fold_enrichment": f"{fold:.3f}",
+                    "p_value": f"{pval:.4e}",
+                    "significant_0.05": "yes" if pval < 0.05 else "no",
+                })
+                print(f"    {cat:<20s} {k:>12,d} {expected:>12,.1f} {fold:>8.2f} {pval:>12.4e}{sig}")
     else:
-        _add("hypergeom_enrichment", ds, "status", f"full NucFlag file not found: {nf_full_path}")
+        print(f"\n    {ds}: full NucFlag file not found: {nf_full_path}")
+
+if hyper_rows:
+    _write_section(
+        "4e_hypergeometric_enrichment.tsv", pd.DataFrame(hyper_rows),
+        "Hypergeometric enrichment test: is each NucFlag category over-/under-represented "
+        "in telomeric ends vs the full 25 kbp NucFlag terminal window?",
+    )
 
 # ── 4f  ONT vs HiFi category proportions (Fisher exact 2x2) ───────────────
+print("\n" + "─" * 80)
+print("4f. ONT vs HiFi CATEGORY PROPORTIONS  (Fisher exact test)")
+print("    Compares the fraction of each NucFlag category between ONT and")
+print("    HiFi datasets using a 2×2 contingency table (Fisher exact test).")
+print("─" * 80)
+
+fisher_rows: list = []
 if len(nf_matrix) == 2:
     mats = {ds: m for ds, m in nf_matrix.items()}
     all_cats_both = sorted(
         set(c for m in mats.values() for c in m.columns if c in all_present_cats),
         key=lambda c: all_present_cats.index(c) if c in all_present_cats else 999,
     )
+    print(f"\n    {'Category':<20s} {'HiFi frac':>10s} {'ONT frac':>10s} {'OR':>8s} {'p-value':>12s}")
+    print(f"    {'─' * 20} {'─' * 10} {'─' * 10} {'─' * 8} {'─' * 12}")
     for cat in all_cats_both:
         vals = {}
         totals = {}
         for ds, m in mats.items():
-            vals[ds] = m[cat].sum() * 1000 if cat in m.columns else 0  # back to bp for counts
+            vals[ds] = m[cat].sum() * 1000 if cat in m.columns else 0
             cats_ds = [c for c in all_present_cats if c in m.columns]
             totals[ds] = m[cats_ds].sum().sum() * 1000
 
@@ -871,31 +1022,82 @@ if len(nf_matrix) == 2:
 
         if min(a + c, a + b) > 0:
             odds, pval = sp_stats.fisher_exact([[a, b], [c, d]], alternative="two-sided")
-            _add("ont_vs_hifi", "both", f"{cat}_odds_ratio", f"{odds:.4f}")
-            _add("ont_vs_hifi", "both", f"{cat}_fisher_pvalue", f"{pval:.4e}")
-            _add("ont_vs_hifi", "both", f"{cat}_hifi_frac", f"{a / (a + b):.6f}" if (a + b) else "NA")
-            _add("ont_vs_hifi", "both", f"{cat}_ont_frac",  f"{c / (c + d):.6f}" if (c + d) else "NA")
+            hifi_f = a / (a + b) if (a + b) else 0
+            ont_f  = c / (c + d) if (c + d) else 0
+            sig = " *" if pval < 0.05 else ""
+            fisher_rows.append({
+                "category": cat,
+                "hifi_bp": str(a), "hifi_other_bp": str(b),
+                "ont_bp": str(c), "ont_other_bp": str(d),
+                "hifi_fraction": f"{hifi_f:.6f}" if (a + b) else "NA",
+                "ont_fraction": f"{ont_f:.6f}" if (c + d) else "NA",
+                "odds_ratio": f"{odds:.4f}",
+                "p_value": f"{pval:.4e}",
+                "significant_0.05": "yes" if pval < 0.05 else "no",
+            })
+            print(f"    {cat:<20s} {hifi_f:>10.4f} {ont_f:>10.4f} {odds:>8.3f} {pval:>12.4e}{sig}")
+
+if fisher_rows:
+    _write_section(
+        "4f_ont_vs_hifi_fisher.tsv", pd.DataFrame(fisher_rows),
+        "Fisher exact test comparing NucFlag category proportions between "
+        "ONT and HiFi datasets (2×2 contingency tables, bp-level).",
+    )
 
 # ── 4g  Per-chromosome type grouping (metacentric / submetacentric / acrocentric)
+print("\n" + "─" * 80)
+print("4g. CHROMOSOME-TYPE BREAKDOWN")
+print("    NucFlag category composition grouped by chromosome morphology:")
+print("    metacentric, submetacentric, acrocentric.")
+print("─" * 80)
+
 CHR_TYPE = {}
 for c in chroms:
     CHR_TYPE[c] = _classify_chr(c)
 
+chrtype_rows: list = []
 for ds, mat in nf_matrix.items():
     mat_c = mat.copy()
     mat_c["chr_type"] = mat_c["chr_display"].map(CHR_TYPE)
     cats_ds = [c for c in all_present_cats if c in mat.columns and mat[c].sum() > 0]
+    print(f"\n    {ds}")
     for ctype in sorted(mat_c["chr_type"].unique()):
         sub = mat_c.loc[mat_c["chr_type"] == ctype]
         total = sub[cats_ds].sum().sum()
+        n_chr_type = sub["chr_display"].nunique()
+        print(f"      {ctype} ({n_chr_type} chr, total: {total:.1f} kbp):")
         for cat in cats_ds:
             s = sub[cat].sum()
-            _add("chr_type_breakdown", ds, f"{ctype}_{cat}_kbp", f"{s:.3f}")
-            _add("chr_type_breakdown", ds, f"{ctype}_{cat}_frac", f"{s / total:.6f}" if total else "NA")
+            frac = s / total if total else 0
+            chrtype_rows.append({
+                "dataset": ds, "chr_type": ctype,
+                "category": cat,
+                "total_kbp": f"{s:.3f}",
+                "fraction": f"{frac:.6f}" if total else "NA",
+            })
+            if s > 0:
+                print(f"        {cat:<20s}  {s:>8.3f} kbp  ({frac:.4f})")
+
+if chrtype_rows:
+    _write_section(
+        "4g_chrtype_breakdown.tsv", pd.DataFrame(chrtype_rows),
+        "NucFlag category breakdown by chromosome type (metacentric / "
+        "submetacentric / acrocentric), with kbp and fraction.",
+    )
 
 # ── 4h  Hap1 vs hap2 per-category comparison (Wilcoxon signed-rank) ───────
+print("\n" + "─" * 80)
+print("4h. HAP1 vs HAP2 COMPARISON  (Wilcoxon signed-rank test)")
+print("    Paired comparison of NucFlag category coverage between hap1 and")
+print("    hap2 at matched chr × arm loci.")
+print("─" * 80)
+
+hap_rows: list = []
 for ds, mat in nf_matrix.items():
     cats_ds = [c for c in all_present_cats if c in mat.columns and mat[c].sum() > 0]
+    print(f"\n    {ds}")
+    print(f"    {'Category':<20s} {'hap1 med':>10s} {'hap2 med':>10s} {'W stat':>10s} {'p-value':>12s}")
+    print(f"    {'─' * 20} {'─' * 10} {'─' * 10} {'─' * 10} {'─' * 12}")
     for cat in cats_ds:
         h1 = mat.loc[mat["hap"] == "hap1"].set_index(["chr_display", "arm"])[cat]
         h2 = mat.loc[mat["hap"] == "hap2"].set_index(["chr_display", "arm"])[cat]
@@ -906,14 +1108,43 @@ for ds, mat in nf_matrix.items():
             diff = v1 - v2
             if np.any(diff != 0):
                 stat, pval = sp_stats.wilcoxon(v1, v2, alternative="two-sided")
-                _add("hap_comparison", ds, f"{cat}_wilcoxon_stat", f"{stat:.1f}")
-                _add("hap_comparison", ds, f"{cat}_wilcoxon_pvalue", f"{pval:.4e}")
-                _add("hap_comparison", ds, f"{cat}_hap1_median", f"{np.median(v1):.3f}")
-                _add("hap_comparison", ds, f"{cat}_hap2_median", f"{np.median(v2):.3f}")
+                sig = " *" if pval < 0.05 else ""
+                hap_rows.append({
+                    "dataset": ds, "category": cat,
+                    "n_pairs": str(len(common)),
+                    "hap1_median_kbp": f"{np.median(v1):.3f}",
+                    "hap2_median_kbp": f"{np.median(v2):.3f}",
+                    "wilcoxon_stat": f"{stat:.1f}",
+                    "p_value": f"{pval:.4e}",
+                    "significant_0.05": "yes" if pval < 0.05 else "no",
+                })
+                print(f"    {cat:<20s} {np.median(v1):>10.3f} {np.median(v2):>10.3f} "
+                      f"{stat:>10.1f} {pval:>12.4e}{sig}")
 
-# ── Write stats TSV ────────────────────────────────────────────────────────
-df_stats = pd.DataFrame(stat_rows)
-df_stats.to_csv(stats_out, sep="\t", index=False)
-print(f"[OK] {stats_out}  ({len(df_stats)} rows)")
+if hap_rows:
+    _write_section(
+        "4h_hap_comparison.tsv", pd.DataFrame(hap_rows),
+        "Wilcoxon signed-rank test comparing NucFlag category coverage (kbp) "
+        "between hap1 and hap2 at matched chr × arm loci.",
+    )
 
-print("\n[DONE] H9 telomere NucFlag plots & statistics generated.")
+# ── Final combined stats TSV (backward-compatible) ─────────────────────────
+all_section_dfs = []
+for fname in sorted(os.listdir(stats_dir)):
+    if fname.endswith(".tsv"):
+        fpath = os.path.join(stats_dir, fname)
+        section_name = fname.replace(".tsv", "")
+        df_sec = pd.read_csv(fpath, sep="\t")
+        df_sec.insert(0, "section", section_name)
+        all_section_dfs.append(df_sec)
+
+if all_section_dfs:
+    df_combined = pd.concat(all_section_dfs, ignore_index=True)
+    df_combined.to_csv(stats_out, sep="\t", index=False)
+    print(f"\n[SAVED] Combined stats: {stats_out}  ({len(df_combined)} rows)")
+
+print("\n" + "=" * 80)
+print("[DONE] H9 telomere NucFlag plots & statistics generated.")
+print(f"       Figures: {plots_dir}")
+print(f"       Stats:   {stats_dir}")
+print("=" * 80)

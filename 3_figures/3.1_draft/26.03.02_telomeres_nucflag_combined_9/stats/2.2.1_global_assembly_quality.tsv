@@ -1,0 +1,6 @@
+joint_status	overlap_bp	percentage
+TOTAL Telomere Space	692615	100.0
+Both Correct	239524	34.58256029684601
+Both Error / Unsupported	64308	9.28481190849173
+HiFi Rescued	95960	13.854738924221971
+ONT Rescued	292823	42.277888870440286

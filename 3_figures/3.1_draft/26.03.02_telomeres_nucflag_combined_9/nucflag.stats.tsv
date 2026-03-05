@@ -1,0 +1,297 @@
+[INFO] Loading Teloscope BED: /mnt/d/research/h9_annotation/2_data/2.2_processed/25.12.10_teloscope_compiled/H9_T2T_v0.1_dip.fasta_terminal_telomeres.bed
+[INFO] Loading Combined NucFlag: /mnt/d/research/h9_annotation/2_data/2.2_processed/nucflag/nucflag_telo_combined.tsv
+[INFO] Intersecting strictly matching telomere intervals in-memory...
+
+[INFO] Generating Statistics (2.2.1 - 2.2.3 answers)...
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/2.2.1_global_assembly_quality.tsv - Overall assembly quality metrics taking both datasets natively
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/global_tech_error_breakdown.tsv - NucFlag categories mapped explicitly per technology
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/2.2.3_per_telomere_quality_ranking.tsv - Best and worst telomeres ranked by joint correct percentage
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/2.2.2_hifi_rescued_ranked.tsv - Telomeres explicitly rescued by HiFi technology
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/2.2.2_ont_rescued_ranked.tsv - Telomeres explicitly rescued by ONT technology
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/chr_type_quality.tsv - Assembly quality distributions by acrocentric/submetacentric/metacentric group
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/pair_per_telomere_quality.tsv - Per-telomere quality (pairwise classification)
+[INFO] Computing per-telomere per-tech scatter metrics...
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/pair_scatter_metrics.tsv - Per-telomere per-tech metrics (status-based)
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/pair_chr_type_quality.tsv - Chr type quality (pairwise classification)
+
+[INFO] Generating publication-ready Cell figures...
+
+==========================================================================================
+CHROMOSOME TYPE × TECHNOLOGY ASSOCIATION ANALYSIS
+==========================================================================================
+
+──────────────────────────────────────────────────────────────────────────────────────────
+  Correct – all reads
+──────────────────────────────────────────────────────────────────────────────────────────
+  Chr type             n        HiFi mean±sd         ONT mean±sd
+  acrocentric         19     24.8± 24.9     84.3± 24.0
+  metacentric         20     84.5± 25.6     68.3± 35.8
+  submetacentric      52     72.1± 32.3     67.8± 34.4
+
+  Kruskal–Wallis (omnibus, 3 chr-types):
+    HiFi: H=26.201, p=2.0442e-06
+    ONT: H=1.612, p=4.4665e-01
+
+  Mann–Whitney U pairwise (two-sided):
+    HiFi acro vs meta: U=32, p=8.2482e-06 *
+    ONT acro vs meta: U=214, p=5.0907e-01 
+    HiFi acro vs subm: U=154, p=1.0508e-05 *
+    ONT acro vs subm: U=597, p=1.8302e-01 
+    HiFi meta vs subm: U=656, p=8.6139e-02 
+    ONT meta vs subm: U=536, p=8.4548e-01 
+
+  Directed hypotheses (one-sided):
+    Acro ONT > Meta ONT: U=214, p=2.5453e-01
+    Meta HiFi > Acro HiFi: U=348, p=4.1241e-06
+
+  Welch's t-test (parametric, two-sided):
+    HiFi acro vs meta: t=-7.390, p=8.6570e-09
+    ONT acro vs meta: t=1.646, p=1.0913e-01
+
+  Spearman corr (HiFi vs ONT within chr-type):
+    acrocentric: rho=0.308, p=1.9950e-01
+    metacentric: rho=-0.037, p=8.7734e-01
+    submetacentric: rho=-0.361, p=8.6013e-03
+
+──────────────────────────────────────────────────────────────────────────────────────────
+  Correct – excl. repeats
+──────────────────────────────────────────────────────────────────────────────────────────
+  Chr type             n        HiFi mean±sd         ONT mean±sd
+  acrocentric         19     66.1± 33.5     94.6± 21.5
+  metacentric         20     89.1± 21.1     68.3± 35.8
+  submetacentric      52     84.3± 25.7     69.1± 35.2
+
+  Kruskal–Wallis (omnibus, 3 chr-types):
+    HiFi: H=8.003, p=1.8288e-02
+    ONT: H=13.228, p=1.3413e-03
+
+  Mann–Whitney U pairwise (two-sided):
+    HiFi acro vs meta: U=100, p=1.0763e-02 *
+    ONT acro vs meta: U=312, p=6.3934e-04 *
+    HiFi acro vs subm: U=318, p=2.1929e-02 *
+    ONT acro vs subm: U=739, p=1.3860e-03 *
+    HiFi meta vs subm: U=610, p=2.5523e-01 
+    ONT meta vs subm: U=483, p=6.4573e-01 
+
+  Directed hypotheses (one-sided):
+    Acro ONT > Meta ONT: U=312, p=3.1967e-04
+    Meta HiFi > Acro HiFi: U=280, p=5.3816e-03
+
+  Welch's t-test (parametric, two-sided):
+    HiFi acro vs meta: t=-2.551, p=1.6066e-02
+    ONT acro vs meta: t=2.792, p=8.8301e-03
+
+  Spearman corr (HiFi vs ONT within chr-type):
+    acrocentric: rho=-0.115, p=6.3804e-01
+    metacentric: rho=-0.041, p=8.6214e-01
+    submetacentric: rho=-0.164, p=2.4538e-01
+
+──────────────────────────────────────────────────────────────────────────────────────────
+  Error – all reads
+──────────────────────────────────────────────────────────────────────────────────────────
+  Chr type             n        HiFi mean±sd         ONT mean±sd
+  acrocentric         19      9.6± 16.8      5.2± 21.6
+  metacentric         20      3.7±  8.3      0.1±  0.2
+  submetacentric      52      7.3± 15.8      0.3±  1.6
+
+  Kruskal–Wallis (omnibus, 3 chr-types):
+    HiFi: H=2.191, p=3.3436e-01
+    ONT: H=1.598, p=4.4985e-01
+
+  Mann–Whitney U pairwise (two-sided):
+    HiFi acro vs meta: U=238, p=1.7385e-01 
+    ONT acro vs meta: U=233, p=1.8747e-01 
+    HiFi acro vs subm: U=572, p=3.0557e-01 
+    ONT acro vs subm: U=510, p=8.2800e-01 
+    HiFi meta vs subm: U=455, p=4.0969e-01 
+    ONT meta vs subm: U=447, p=3.0422e-01 
+
+  Directed hypotheses (one-sided):
+    Acro ONT > Meta ONT: U=233, p=9.3733e-02
+    Meta HiFi > Acro HiFi: U=142, p=9.1752e-01
+
+  Welch's t-test (parametric, two-sided):
+    HiFi acro vs meta: t=1.392, p=1.7568e-01
+    ONT acro vs meta: t=1.033, p=3.1549e-01
+
+  Spearman corr (HiFi vs ONT within chr-type):
+    acrocentric: rho=-0.223, p=3.5781e-01
+    metacentric: rho=0.230, p=3.2859e-01
+    submetacentric: rho=0.259, p=6.3442e-02
+
+──────────────────────────────────────────────────────────────────────────────────────────
+  Error – excl. repeats
+──────────────────────────────────────────────────────────────────────────────────────────
+  Chr type             n        HiFi mean±sd         ONT mean±sd
+  acrocentric         19     18.4± 22.7      5.2± 21.6
+  metacentric         20      4.3±  8.6      0.1±  0.2
+  submetacentric      52      8.4± 16.7      0.3±  1.8
+
+  Kruskal–Wallis (omnibus, 3 chr-types):
+    HiFi: H=5.053, p=7.9951e-02
+    ONT: H=1.775, p=4.1162e-01
+
+  Mann–Whitney U pairwise (two-sided):
+    HiFi acro vs meta: U=263, p=3.7925e-02 *
+    ONT acro vs meta: U=236, p=1.5820e-01 
+    HiFi acro vs subm: U=626, p=8.5299e-02 
+    ONT acro vs subm: U=517, p=7.5247e-01 
+    HiFi meta vs subm: U=440, p=3.0955e-01 
+    ONT meta vs subm: U=446, p=2.9760e-01 
+
+  Directed hypotheses (one-sided):
+    Acro ONT > Meta ONT: U=236, p=7.9099e-02
+    Meta HiFi > Acro HiFi: U=117, p=9.8232e-01
+
+  Welch's t-test (parametric, two-sided):
+    HiFi acro vs meta: t=2.542, p=1.8282e-02
+    ONT acro vs meta: t=1.033, p=3.1537e-01
+
+  Spearman corr (HiFi vs ONT within chr-type):
+    acrocentric: rho=-0.200, p=4.1060e-01
+    metacentric: rho=0.217, p=3.5828e-01
+    submetacentric: rho=0.277, p=4.7166e-02
+
+==========================================================================================
+MULTIPLE TESTING CORRECTION (Benjamini-Hochberg & Bonferroni)
+==========================================================================================
+  Total tests: 48
+  Rank        p_raw     p_adj_BH   p_adj_Bonf Sig(BH) Sig(Bonf)  Test
+     1   8.6570e-09   4.1553e-07   4.1553e-07     ***       ***  Correct – all reads | Welch HiFi acro vs meta
+     2   2.0442e-06   4.9062e-05   9.8124e-05     ***       ***  Correct – all reads | KW HiFi
+     3   4.1241e-06   6.5986e-05   1.9796e-04     ***       ***  Correct – all reads | Meta HiFi > Acro HiFi
+     4   8.2482e-06   9.8979e-05   3.9591e-04     ***       ***  Correct – all reads | MWU HiFi acro vs meta
+     5   1.0508e-05   1.0088e-04   5.0439e-04     ***       ***  Correct – all reads | MWU HiFi acro vs subm
+     6   3.1967e-04   2.5574e-03   1.5344e-02      **         *  Correct – excl. repeats | Acro ONT > Meta ONT
+     7   6.3934e-04   4.3840e-03   3.0688e-02      **         *  Correct – excl. repeats | MWU ONT acro vs meta
+     8   1.3413e-03   7.3922e-03   6.4381e-02      **            Correct – excl. repeats | KW ONT
+     9   1.3860e-03   7.3922e-03   6.6530e-02      **            Correct – excl. repeats | MWU ONT acro vs subm
+    10   5.3816e-03   2.5831e-02   2.5831e-01       *            Correct – excl. repeats | Meta HiFi > Acro HiFi
+    11   8.8301e-03   3.8531e-02   4.2385e-01       *            Correct – excl. repeats | Welch ONT acro vs meta
+    12   1.0763e-02   4.3052e-02   5.1663e-01       *            Correct – excl. repeats | MWU HiFi acro vs meta
+    13   1.6066e-02   5.8521e-02   7.7119e-01                    Correct – excl. repeats | Welch HiFi acro vs meta
+    14   1.8282e-02   5.8521e-02   8.7752e-01                    Error – excl. repeats | Welch HiFi acro vs meta
+    15   1.8288e-02   5.8521e-02   8.7781e-01                    Correct – excl. repeats | KW HiFi
+    16   2.1929e-02   6.5786e-02   1.0000e+00                    Correct – excl. repeats | MWU HiFi acro vs subm
+    17   3.7925e-02   1.0708e-01   1.0000e+00                    Error – excl. repeats | MWU HiFi acro vs meta
+    18   7.9099e-02   1.9689e-01   1.0000e+00                    Error – excl. repeats | Acro ONT > Meta ONT
+    19   7.9951e-02   1.9689e-01   1.0000e+00                    Error – excl. repeats | KW HiFi
+    20   8.5299e-02   1.9689e-01   1.0000e+00                    Error – excl. repeats | MWU HiFi acro vs subm
+    21   8.6139e-02   1.9689e-01   1.0000e+00                    Correct – all reads | MWU HiFi meta vs subm
+    22   9.3733e-02   2.0451e-01   1.0000e+00                    Error – all reads | Acro ONT > Meta ONT
+    23   1.0913e-01   2.2775e-01   1.0000e+00                    Correct – all reads | Welch ONT acro vs meta
+    24   1.5820e-01   3.1640e-01   1.0000e+00                    Error – excl. repeats | MWU ONT acro vs meta
+    25   1.7385e-01   3.2137e-01   1.0000e+00                    Error – all reads | MWU HiFi acro vs meta
+    26   1.7568e-01   3.2137e-01   1.0000e+00                    Error – all reads | Welch HiFi acro vs meta
+    27   1.8302e-01   3.2137e-01   1.0000e+00                    Correct – all reads | MWU ONT acro vs subm
+    28   1.8747e-01   3.2137e-01   1.0000e+00                    Error – all reads | MWU ONT acro vs meta
+    29   2.5453e-01   4.0836e-01   1.0000e+00                    Correct – all reads | Acro ONT > Meta ONT
+    30   2.5523e-01   4.0836e-01   1.0000e+00                    Correct – excl. repeats | MWU HiFi meta vs subm
+    31   2.9760e-01   4.2065e-01   1.0000e+00                    Error – excl. repeats | MWU ONT meta vs subm
+    32   3.0422e-01   4.2065e-01   1.0000e+00                    Error – all reads | MWU ONT meta vs subm
+    33   3.0557e-01   4.2065e-01   1.0000e+00                    Error – all reads | MWU HiFi acro vs subm
+    34   3.0955e-01   4.2065e-01   1.0000e+00                    Error – excl. repeats | MWU HiFi meta vs subm
+    35   3.1537e-01   4.2065e-01   1.0000e+00                    Error – excl. repeats | Welch ONT acro vs meta
+    36   3.1549e-01   4.2065e-01   1.0000e+00                    Error – all reads | Welch ONT acro vs meta
+    37   3.3436e-01   4.3376e-01   1.0000e+00                    Error – all reads | KW HiFi
+    38   4.0969e-01   5.0661e-01   1.0000e+00                    Error – all reads | MWU HiFi meta vs subm
+    39   4.1162e-01   5.0661e-01   1.0000e+00                    Error – excl. repeats | KW ONT
+    40   4.4665e-01   5.2665e-01   1.0000e+00                    Correct – all reads | KW ONT
+    41   4.4985e-01   5.2665e-01   1.0000e+00                    Error – all reads | KW ONT
+    42   5.0907e-01   5.8179e-01   1.0000e+00                    Correct – all reads | MWU ONT acro vs meta
+    43   6.4573e-01   7.2082e-01   1.0000e+00                    Correct – excl. repeats | MWU ONT meta vs subm
+    44   7.5247e-01   8.2087e-01   1.0000e+00                    Error – excl. repeats | MWU ONT acro vs subm
+    45   8.2800e-01   8.8224e-01   1.0000e+00                    Error – all reads | MWU ONT acro vs subm
+    46   8.4548e-01   8.8224e-01   1.0000e+00                    Correct – all reads | MWU ONT meta vs subm
+    47   9.1752e-01   9.3704e-01   1.0000e+00                    Error – all reads | Meta HiFi > Acro HiFi
+    48   9.8232e-01   9.8232e-01   1.0000e+00                    Error – excl. repeats | Meta HiFi > Acro HiFi
+
+==========================================================================================
+INTERPRETATION
+==========================================================================================
+
+  CORRECTION STRATEGY (Bonferroni-primary, BH-secondary)
+  ─────────────────────────────────────────────────────────
+    - Bonferroni controls the family-wise error rate (FWER):
+      the probability of ANY false positive across all tests.
+      Most conservative; appropriate when individual claims
+      must each be defensible (genomics publication standard).
+    - Benjamini-Hochberg (BH) controls the false discovery
+      rate (FDR): the expected PROPORTION of false positives.
+      Less conservative; appropriate for exploratory screens.
+    - Decision: report Bonferroni-corrected p-values as the
+      primary significance criterion. Results that also pass
+      BH provide additional confidence. Results passing BH
+      but not Bonferroni are flagged as suggestive only.
+    - Summary: 7 tests survive Bonferroni (α=0.05),
+      12 survive BH (q=0.05), out of 48 total.
+
+  TEST SELECTION
+  ─────────────────────────────────────────────────────────
+    - Non-parametric tests (Mann-Whitney U, Kruskal-Wallis)
+      are primary: small group sizes (n=19-52), percentage
+      data bounded [0,100], and known outliers (1p_hap2,
+      7q_hap2) violate normality assumptions.
+    - Welch's t-tests included for comparison only; where
+      they agree with non-parametric tests → added confidence.
+    - Spearman correlations assess HiFi-ONT concordance
+      within each chromosome type (non-parametric, rank-based).
+
+  SIGNIFICANT FINDINGS (Bonferroni-corrected)
+  ─────────────────────────────────────────────────────────
+    1. HiFi correct% depends strongly on chromosome type
+       (all reads). Acrocentric telomeres show dramatically
+       lower HiFi correct% (24.8±24.9%) vs metacentric
+       (84.5±25.6%) and submetacentric (72.1±32.3%).
+       Supported by: KW omnibus, MWU acro-vs-meta,
+       MWU acro-vs-subm, directed meta>acro, and Welch
+       (all p_Bonf < 5.0e-04). This is the strongest signal
+       in the dataset.
+
+    2. ONT rescues acrocentric telomeres when repeats are
+       excluded. Acrocentric ONT correct% (94.6±21.5%)
+       significantly exceeds metacentric (68.3±35.8%).
+       Supported by: directed acro ONT > meta ONT
+       (p_Bonf=1.53e-02) and MWU two-sided (p_Bonf=3.07e-02).
+       This confirms the complementarity of ONT for regions
+       where HiFi struggles (acrocentric short arms).
+
+  SUGGESTIVE FINDINGS (BH only, not Bonferroni)
+  ─────────────────────────────────────────────────────────
+    3. When repeats are excluded, the HiFi disadvantage for
+       acrocentric telomeres attenuates but remains nominally
+       significant (BH), while ONT's advantage for acrocentric
+       telomeres (vs submetacentric) emerges under BH.
+       These effects are consistent with Finding 1-2 but do
+       not independently survive Bonferroni.
+
+  NON-SIGNIFICANT FINDINGS
+  ─────────────────────────────────────────────────────────
+    4. Error rates show no significant differences across
+       chromosome types for either technology after correction.
+       The quality difference is about correct-classification
+       capacity, not differential error accumulation.
+
+    5. Spearman HiFi-ONT correlations within chromosome types
+       are weak and inconsistent (rho -0.36 to +0.31).
+       Only submetacentric shows a nominally significant
+       negative correlation (rho=-0.361, p=8.6e-03), but this
+       does not survive multiple-testing correction and should
+       not be over-interpreted.
+
+  BIOLOGICAL CONCLUSION
+  ─────────────────────────────────────────────────────────
+    Acrocentric p-arm telomeres are the primary challenge for
+    HiFi-based assembly, likely due to satellite/rDNA-adjacent
+    repeat content causing collapses/misjoins in short reads.
+    ONT long reads compensate specifically in these regions,
+    providing near-complete (94.6%) correct coverage once
+    repeat context is excluded. The two technologies are
+    complementary, and dual-platform NucFlag validation is
+    essential for telomere-to-telomere assembly QC, especially
+    at acrocentric chromosomes.
+==========================================================================================
+
+  [SAVED] /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9/stats/chr_type_association_stats.tsv - Chromosome type × technology association stats (BH + Bonferroni corrected)
+
+[DONE] All Cell-ready figures saved to: /mnt/d/research/h9_annotation/3_figures/3.1_draft/26.03.02_telomeres_nucflag_combined_9
